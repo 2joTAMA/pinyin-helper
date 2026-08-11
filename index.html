@@ -37,6 +37,7 @@
     flex:0 0 auto;
     display:flex; align-items:center; justify-content:space-between;
     padding:8px 12px;
+    padding-top:calc(8px + env(safe-area-inset-top));
     border-bottom:1px solid var(--line);
     background:var(--ink-soft);
   }
@@ -126,17 +127,26 @@
     top:32%;
     right:0;
     width:150px;
-    pointer-events:none;
+    pointer-events:auto;
     z-index:5;
     transform:translateY(-50%) translateX(100%);
     filter:drop-shadow(-4px 5px 10px rgba(0,0,0,0.35));
   }
   #surume img{ width:100%; display:block; }
-  #surume.in{
+  #surume.visible{
+    transform:translateY(-50%) translateX(40%) scale(1);
+  }
+  #surume.enter{
     animation:peekIn 0.85s cubic-bezier(.22,.85,.28,1.15) forwards;
   }
-  #surume.out{
+  #surume.leaving{
     animation:peekOut 0.95s ease-in-out forwards;
+  }
+  #surume.poke{
+    animation:peekPoke 0.3s cubic-bezier(.33,0,.2,1) 2 alternate;
+  }
+  #surume.shake{
+    animation:peekShake 0.5s ease-in-out;
   }
   @keyframes peekIn{
     0%   { transform:translateY(-50%) translateX(100%) scale(0.85); }
@@ -149,6 +159,19 @@
     14%  { transform:translateY(-50%) translateX(33%) scale(1.05); }
     42%  { transform:translateY(-50%) translateX(36%) scale(1.02); }
     100% { transform:translateY(-50%) translateX(100%) scale(0.85); }
+  }
+  @keyframes peekPoke{
+    0%   { transform:translateY(-50%) translateX(40%) scale(1); }
+    100% { transform:translateY(-50%) translateX(21%) scale(1.05); }
+  }
+  @keyframes peekShake{
+    0%,100% { transform:translateY(-50%) translateX(40%) rotate(0deg); }
+    15% { transform:translateY(calc(-50% - 5px)) translateX(40%) rotate(-3deg); }
+    30% { transform:translateY(calc(-50% + 5px)) translateX(40%) rotate(3deg); }
+    45% { transform:translateY(calc(-50% - 4px)) translateX(40%) rotate(-2deg); }
+    60% { transform:translateY(calc(-50% + 4px)) translateX(40%) rotate(2deg); }
+    75% { transform:translateY(calc(-50% - 2px)) translateX(40%) rotate(-1deg); }
+    90% { transform:translateY(calc(-50% + 2px)) translateX(40%) rotate(1deg); }
   }
 </style>
 </head>
@@ -220,21 +243,47 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
   }
 
   let hasText = false;
+  let pokeCount = 0;
   function updateSurume(nextHasText) {
     if (nextHasText === hasText) return;
     hasText = nextHasText;
     if (!surume) return;
     if (hasText) {
-      surume.classList.remove('out');
-      // クラスを一旦外して再付与することで、連続入力中でもアニメーションを正しく再生する
+      surume.classList.remove('leaving', 'visible', 'poke', 'shake');
       void surume.offsetWidth;
-      surume.classList.add('in');
+      surume.classList.add('enter');
     } else {
-      surume.classList.remove('in');
+      pokeCount = 0; // 引っ込んだらタップ回数をリセット
+      surume.classList.remove('enter', 'visible', 'poke', 'shake');
       void surume.offsetWidth;
-      surume.classList.add('out');
+      surume.classList.add('leaving');
     }
   }
+
+  if (surume) {
+    surume.addEventListener('click', () => {
+      // 出ている状態（登場アニメーション完了後）のときだけ、タップ演出を再生する
+      if (!hasText || !surume.classList.contains('visible')) return;
+      pokeCount++;
+      const isAnnoyed = pokeCount >= 4;
+      surume.classList.remove('poke', 'shake');
+      void surume.offsetWidth;
+      surume.classList.add(isAnnoyed ? 'shake' : 'poke');
+    });
+    surume.addEventListener('animationend', (e) => {
+      if (e.animationName === 'peekIn') {
+        surume.classList.remove('enter');
+        surume.classList.add('visible');
+      } else if (e.animationName === 'peekOut') {
+        surume.classList.remove('leaving');
+      } else if (e.animationName === 'peekPoke') {
+        surume.classList.remove('poke');
+      } else if (e.animationName === 'peekShake') {
+        surume.classList.remove('shake');
+      }
+    });
+  }
+
 
   function render() {
     const raw = input.value;
