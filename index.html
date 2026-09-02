@@ -19,6 +19,7 @@
     --seal:#c9704f;
     --seal-soft:#7a4433;
     --line:#4a463e;
+    --warn:#e2574c;
   }
   *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
   [hidden]{ display:none !important; }
@@ -274,25 +275,33 @@
     -webkit-overflow-scrolling:touch;
     padding:6px 16px 16px;
   }
-  .kgroup + .kgroup{ margin-top:12px; padding-top:12px; border-top:1px dashed var(--line); }
-  .kgroupLabel{ font-size:11px; color:var(--paper-dim); letter-spacing:0.5px; margin-bottom:5px; }
-  .kgrid{ display:grid; grid-template-columns:repeat(6, minmax(0,1fr)); gap:5px; }
-  .kgroupRow{ display:flex; gap:6px; flex-wrap:wrap; }
-  .kcard{
-    background:var(--ink-soft); border:1px solid var(--line); border-radius:8px;
-    padding:5px 2px; width:52px;
-    display:flex; flex-direction:column; align-items:center; gap:1px;
+  .kgroup + .kgroup{ margin-top:14px; padding-top:12px; border-top:1px dashed var(--line); }
+  .kgroupLabel{
+    display:flex; align-items:center; gap:5px;
+    font-size:16px; font-weight:700; color:var(--seal);
+    letter-spacing:0.3px; margin-bottom:6px;
   }
-  .kgrid .kcard{ width:auto; }
-  .kpy{ font-size:10px; font-weight:700; color:var(--seal); white-space:nowrap; }
-  .khz{ font-size:19px; color:var(--paper); }
+  .kgroupWarnIcon{ width:14px; height:14px; color:var(--warn); flex:0 0 auto; }
+  .kgroupRow{ display:flex; flex-wrap:wrap; gap:3px; }
+  .kcard{
+    position:relative;
+    display:flex; align-items:center; justify-content:center;
+    padding:3px 4px;
+  }
+  .khz{ font-size:27px; line-height:1; color:var(--paper); }
+  .khz.mismatch{ color:var(--warn); }
+  .ktone{
+    position:absolute; top:-1px; right:-1px;
+    font-size:9px; font-weight:700; line-height:1;
+    color:var(--seal);
+  }
   .kcard.dragging{
     position:fixed; z-index:80;
+    background:var(--ink-soft); border:1px solid var(--seal); border-radius:8px;
     box-shadow:0 10px 22px rgba(0,0,0,0.45);
     transform:rotate(-4deg);
-    border-color:var(--seal);
   }
-  .kcardPlaceholder{ width:52px; height:44px; border:2px dashed var(--seal-soft); border-radius:8px; opacity:0.5; }
+  .kcardPlaceholder{ width:34px; height:34px; border:2px dashed var(--seal-soft); border-radius:8px; opacity:0.5; }
 
   /* ---------- save modal ---------- */
   .modalOverlay{
@@ -406,6 +415,9 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg>
       </button>
     </div>
+    <button id="newBtn" class="iconBtn" type="button" aria-label="新規作成" title="新規作成">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+    </button>
     <button id="saveBtn" type="button">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
       保存
@@ -541,6 +553,7 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
   const listScreen = document.getElementById('listScreen');
   const listBackBtn = document.getElementById('listBackBtn');
   const listNewBtn = document.getElementById('listNewBtn');
+  const newBtn = document.getElementById('newBtn');
   const listRows = document.getElementById('listRows');
 
   const pp = window.pinyinPro;
@@ -615,13 +628,21 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
   }
 
   // ================= pinyin lookup helpers =================
-  function getPinyinFor(ch) {
-    if (!pp || !pp.pinyin) return '';
-    try { return pp.pinyin(ch, { toneType: state.toneType, multiple: false }) || ''; } catch (e) { return ''; }
-  }
   function getBasePinyin(ch) {
     if (!pp || !pp.pinyin) return '';
     try { return pp.pinyin(ch, { toneType: 'none', multiple: false }) || ''; } catch (e) { return ''; }
+  }
+  // 声調の数字1文字だけ取り出す（単漢字モードで123トグルON時に使う）
+  function getToneDigit(ch) {
+    if (!pp || !pp.pinyin) return '';
+    try {
+      const withNum = pp.pinyin(ch, { toneType: 'num', multiple: false }) || '';
+      const m = withNum.match(/([1-5])$/);
+      return m ? m[1] : '';
+    } catch (e) { return ''; }
+  }
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   }
 
   // 単語区切りを考慮してピンインを組み立てる（単語内はくっつけ、単語間はスペース）
@@ -757,20 +778,27 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
     return lines;
   }
 
-  function makeCard(ch) {
+  // 漢字だけを大きく表示。声調数字は123トグルON時のみ右肩に小さく（絶対配置なのでレイアウトは動かない）。
+  // mismatch=true のときは、そのグループの代表音と読みが違う＝警告色で表示。
+  function makeCard(ch, mismatch) {
     const card = document.createElement('div');
     card.className = 'kcard';
     card.dataset.char = ch;
-    const py = document.createElement('div');
-    py.className = 'kpy';
-    py.textContent = getPinyinFor(ch);
-    const hz = document.createElement('div');
-    hz.className = 'khz';
+
+    const hz = document.createElement('span');
+    hz.className = 'khz' + (mismatch ? ' mismatch' : '');
     hz.textContent = ch;
-    card.appendChild(py);
+
+    const tone = document.createElement('span');
+    tone.className = 'ktone';
+    tone.textContent = state.toneType === 'num' ? getToneDigit(ch) : '';
+
     card.appendChild(hz);
+    card.appendChild(tone);
     return card;
   }
+
+  const WARN_ICON_SVG = '<svg class="kgroupWarnIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>';
 
   function renderKanjiMode() {
     const lines = parseKanjiLines(input.value);
@@ -782,19 +810,29 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
       return;
     }
 
+    // 2行以上（＝グループ分け済み）のときだけ、グループ見出し・不一致警告を出す。
+    // グループが1つもまだ無い状態では、何も判定しない。
     const isGroupedView = lines.length > 1;
     lines.forEach((chars) => {
       const wrap = document.createElement('div');
       wrap.className = 'kgroup';
+
+      let labelKey = '';
       if (isGroupedView) {
+        labelKey = getBasePinyin(chars[0]) || '';
+        const hasMismatch = chars.some((ch) => getBasePinyin(ch) !== labelKey);
         const label = document.createElement('div');
         label.className = 'kgroupLabel';
-        label.textContent = getBasePinyin(chars[0]) || '';
+        label.innerHTML = '<span>' + escapeHtml(labelKey) + '</span>' + (hasMismatch ? WARN_ICON_SVG : '');
         wrap.appendChild(label);
       }
+
       const row = document.createElement('div');
-      row.className = isGroupedView ? 'kgroupRow' : 'kgrid';
-      chars.forEach((ch) => row.appendChild(makeCard(ch)));
+      row.className = 'kgroupRow';
+      chars.forEach((ch) => {
+        const mismatch = isGroupedView && getBasePinyin(ch) !== labelKey;
+        row.appendChild(makeCard(ch, mismatch));
+      });
       wrap.appendChild(row);
       kanjiGrid.appendChild(wrap);
     });
@@ -865,7 +903,7 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
   function collectTextFromDom() {
     const lines = [];
     kanjiGrid.querySelectorAll('.kgroup').forEach((groupEl) => {
-      const row = groupEl.querySelector('.kgroupRow, .kgrid');
+      const row = groupEl.querySelector('.kgroupRow');
       if (!row) return;
       const chars = Array.prototype.map
         .call(row.querySelectorAll('.kcard'), (c) => c.dataset.char)
@@ -1245,8 +1283,22 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
 
   listBtn.addEventListener('click', openListScreen);
   listBackBtn.addEventListener('click', closeListScreen);
+  // 保存済みでない内容がある状態で新規作成しようとしたら確認する
+  function confirmDiscardIfNeeded() {
+    if (!currentFileId && input.value.trim() !== '') {
+      return window.confirm('保存されていない内容が消えます。新規作成しますか？');
+    }
+    return true;
+  }
+
   listNewBtn.addEventListener('click', () => {
+    if (!confirmDiscardIfNeeded()) return;
     closeListScreen();
+    startNewFile();
+  });
+
+  newBtn.addEventListener('click', () => {
+    if (!confirmDiscardIfNeeded()) return;
     startNewFile();
   });
 
