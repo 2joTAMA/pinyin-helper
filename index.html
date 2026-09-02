@@ -57,7 +57,7 @@
     border-radius:999px;
   }
   .iconBtn:active{ background:rgba(217,208,189,0.12); }
-  .iconBtn svg{ display:block; }
+  .iconBtn svg{ width:20px; height:20px; display:block; }
   #titleWrap{
     flex:1 1 auto; min-width:0;
     display:flex; align-items:center; justify-content:center; gap:6px;
@@ -114,6 +114,19 @@
     flex:0 0 auto;
   }
   #toneToggle.active{ border-color:var(--seal); color:var(--seal); }
+  #focusToggle{
+    display:flex; align-items:center; justify-content:center;
+    width:28px; height:28px;
+    margin-left:6px;
+    border:1px solid var(--line);
+    border-radius:999px;
+    background:none;
+    color:var(--paper-dim);
+    flex:0 0 auto;
+  }
+  #focusToggle svg{ width:14px; height:14px; display:block; transition:transform .2s ease; }
+  #focusToggle.active{ border-color:var(--seal); color:var(--seal); }
+  #focusToggle.active svg{ transform:rotate(180deg); }
 
   /* ---------- input ---------- */
   #inputWrap{
@@ -122,6 +135,16 @@
     border-bottom:1px solid var(--line);
     background:var(--ink-soft);
     position:relative;
+    max-height:280px;
+    overflow:hidden;
+    transition:max-height .25s ease, opacity .2s ease, padding .25s ease;
+  }
+  body.focusMode #inputWrap{
+    max-height:0;
+    padding-top:0; padding-bottom:0;
+    opacity:0;
+    border-bottom-color:transparent;
+    pointer-events:none;
   }
   #zhInput{
     width:100%;
@@ -159,6 +182,15 @@
     display:flex; align-items:center; justify-content:space-between;
     padding:10px 16px;
     gap:10px;
+    max-height:80px;
+    overflow:hidden;
+    transition:max-height .25s ease, opacity .2s ease, padding .25s ease;
+  }
+  body.focusMode #kanjiToolbar{
+    max-height:0;
+    padding-top:0; padding-bottom:0;
+    opacity:0;
+    pointer-events:none;
   }
   #kanjiActions{ display:flex; align-items:center; gap:10px; flex:1 1 auto; min-width:0; }
   .pillBtn{
@@ -386,6 +418,9 @@
       <button class="tabBtn" data-mode="kanji" type="button">単漢字モード</button>
     </div>
     <button id="toneToggle" type="button" aria-pressed="false" title="声調を数字でも表示">123</button>
+    <button id="focusToggle" type="button" aria-pressed="false" title="入力欄を畳んで広く表示">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 11 12 6 7 11"></polyline><polyline points="17 18 12 13 7 18"></polyline></svg>
+    </button>
   </div>
 
   <div id="inputWrap">
@@ -486,6 +521,7 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
 
   const tabBtns = document.querySelectorAll('.tabBtn');
   const toneToggle = document.getElementById('toneToggle');
+  const focusToggle = document.getElementById('focusToggle');
 
   const kanjiToolbar = document.getElementById('kanjiToolbar');
   const kanjiActions = document.getElementById('kanjiActions');
@@ -529,6 +565,7 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
     mode: 'sentence',      // 'sentence' | 'kanji'
     toneType: 'symbol',    // 'symbol' | 'num' (どちらか一方のみ表示。併記はしない)
     reordering: false,
+    focusMode: false,
   };
 
   let currentFileId = null;
@@ -928,6 +965,14 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
     toneToggle.classList.toggle('active', state.toneType === 'num');
     toneToggle.setAttribute('aria-pressed', state.toneType === 'num' ? 'true' : 'false');
     renderCurrentMode();
+  });
+
+  focusToggle.addEventListener('click', () => {
+    state.focusMode = !state.focusMode;
+    document.body.classList.toggle('focusMode', state.focusMode);
+    focusToggle.classList.toggle('active', state.focusMode);
+    focusToggle.setAttribute('aria-pressed', state.focusMode ? 'true' : 'false');
+    focusToggle.title = state.focusMode ? '入力欄を表示' : '入力欄を畳んで広く表示';
   });
 
   // ================= 描画の切替 =================
