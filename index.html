@@ -117,7 +117,7 @@
   #toneToggle.active{ border-color:var(--seal); color:var(--seal); }
   #focusToggle{
     display:flex; align-items:center; justify-content:center;
-    width:28px; height:28px;
+    padding:5px 13px;
     margin-left:6px;
     border:1px solid var(--line);
     border-radius:999px;
@@ -226,7 +226,11 @@
   body.reordering #kanjiToolbar{ background:rgba(201,112,79,0.1); }
   body.reordering #kanjiActions{ display:none; }
   body.reordering #reorderActions{ display:flex; }
-  body.reordering .kcard{ touch-action:none; }
+  body.reordering .kcard{
+    touch-action:none;
+    -webkit-user-select:none; user-select:none;
+    -webkit-touch-callout:none;
+  }
 
   main{
     flex:1 1 auto;
