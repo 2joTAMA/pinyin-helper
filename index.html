@@ -365,6 +365,8 @@
     display:flex; align-items:center; justify-content:space-between; gap:10px;
     padding:12px 2px;
     touch-action:pan-y;
+    -webkit-touch-callout:none;
+    -webkit-user-select:none; user-select:none;
   }
   .listTitle{
     flex:1 1 auto; min-width:0; font-size:14px; font-weight:600; color:var(--paper);
@@ -374,7 +376,25 @@
   .listBadge{ font-size:10px; font-weight:700; padding:3px 8px; border-radius:999px; white-space:nowrap; }
   .badgeSentence{ background:rgba(201,112,79,0.15); color:var(--seal); }
   .badgeKanji{ background:rgba(217,208,189,0.12); color:var(--paper-dim); border:1px solid var(--line); }
-  .listDate{ font-size:11px; color:var(--paper-dim); width:34px; text-align:right; }
+
+  /* 長押しでファイル行を掴んで並び替え */
+  .listRowWrap.armed .listRow{ transform:scale(0.97); transition:transform .12s ease; }
+  .listRowWrap.rowDragging{
+    position:fixed; z-index:85;
+    border-bottom:none;
+    box-shadow:0 12px 28px rgba(0,0,0,0.5);
+  }
+  .listRowWrap.rowDragging .listRow{
+    border:1px solid var(--seal); border-radius:10px;
+    background:var(--ink-soft);
+  }
+  .listRowWrap.rowDragging .listRowActions{ display:none; }
+  .listRowPlaceholder{
+    border:2px dashed var(--seal-soft); border-radius:10px;
+    opacity:0.5; margin:4px 0;
+  }
+  #listRows.isDragging{ -webkit-user-select:none; user-select:none; }
+  #listRows.isDragging .listRow{ touch-action:none; }
 
   /* ---------- saved list: search + folders ---------- */
   #listSearchBar{
@@ -1182,6 +1202,17 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
   }
   let savedFiles = loadSavedFiles();
 
+  // 一覧の並び順を「更新日時順」から「手動（配列順）」へ一度だけ移行する。
+  // 既存ユーザーには、今まで見えていた並び（新しい順）をそのまま初期の手動順として渡す。
+  const ORDER_INIT_KEY = 'pinyinHelperOrderInit_v1';
+  try {
+    if (!localStorage.getItem(ORDER_INIT_KEY)) {
+      savedFiles.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+      persistSavedFiles();
+      localStorage.setItem(ORDER_INIT_KEY, '1');
+    }
+  } catch (e) { /* noop */ }
+
   // ---------- フォルダ（1階層） ----------
   const FOLDER_KEY = 'pinyinHelperFolders_v1';
   function loadFolders() {
@@ -1316,7 +1347,7 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
         folderId: listView.folderId || null,
         updatedAt: Date.now(),
       };
-      savedFiles.push(file);
+      savedFiles.unshift(file); // 新規保存は一覧の先頭へ。以降は手動の並び順を保持
       persistSavedFiles();
       currentFileId = file.id;
       setFileTitle(title);
@@ -1325,11 +1356,6 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
   });
 
   // ================= 保存一覧 =================
-  function formatDate(ts) {
-    const d = new Date(ts);
-    return (d.getMonth() + 1) + '/' + d.getDate();
-  }
-
   function openListScreen() {
     updateListChrome();
     listSearchInput.value = listView.query;
@@ -1378,9 +1404,7 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
 
     // 検索中：全ファイルを横断してフラット表示
     if (q) {
-      const hits = savedFiles
-        .filter((f) => fileMatchesQuery(f, q))
-        .sort((a, b) => b.updatedAt - a.updatedAt);
+      const hits = savedFiles.filter((f) => fileMatchesQuery(f, q));
       if (!hits.length) {
         listRows.appendChild(emptyRow('該当する保存はありません'));
         return;
@@ -1404,8 +1428,7 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
         .forEach((folder) => listRows.appendChild(makeFolderRow(folder)));
 
       const rootFiles = savedFiles
-        .filter((f) => !f.folderId || !folders.some((d) => d.id === f.folderId))
-        .sort((a, b) => b.updatedAt - a.updatedAt);
+        .filter((f) => !f.folderId || !folders.some((d) => d.id === f.folderId));
 
       if (folders.length && rootFiles.length) {
         const div = document.createElement('div');
@@ -1422,8 +1445,7 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
 
     // フォルダの中
     const inFolder = savedFiles
-      .filter((f) => (f.folderId || null) === listView.folderId)
-      .sort((a, b) => b.updatedAt - a.updatedAt);
+      .filter((f) => (f.folderId || null) === listView.folderId);
     if (!inFolder.length) {
       listRows.appendChild(emptyRow('このフォルダは空です'));
       return;
@@ -1464,6 +1486,7 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
 
     const row = document.createElement('div');
     row.className = 'listRow';
+    row.dataset.fileId = file.id;
 
     const title = document.createElement('span');
     title.className = 'listTitle';
@@ -1482,28 +1505,14 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
     const badge = document.createElement('span');
     badge.className = 'listBadge ' + (file.mode === 'kanji' ? 'badgeKanji' : 'badgeSentence');
     badge.textContent = file.mode === 'kanji' ? '単漢字' : '文章';
-    const date = document.createElement('span');
-    date.className = 'listDate';
-    date.textContent = formatDate(file.updatedAt);
     meta.appendChild(badge);
-    meta.appendChild(date);
 
     row.appendChild(title);
     row.appendChild(meta);
 
-    row.addEventListener('click', () => {
-      if (row.classList.contains('swiped')) {
-        row.classList.remove('swiped');
-        row.style.transform = '';
-        return;
-      }
-      loadFile(file);
-      closeListScreen();
-    });
-
     wrap.appendChild(actions);
     wrap.appendChild(row);
-    attachSwipe(row, 128);
+    attachFileRowGestures(wrap, row, () => { loadFile(file); closeListScreen(); }, !opts.showFolder);
     return wrap;
   }
 
@@ -1613,6 +1622,193 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
     }
     row.addEventListener('pointerup', endDrag);
     row.addEventListener('pointercancel', endDrag);
+  }
+
+  // ファイル行のジェスチャ：タップで開く／左スワイプでアクション表示／長押しで並び替え
+  function attachFileRowGestures(wrap, row, onOpen, enableReorder) {
+    const ACTION_W = 128;
+    const HOLD_MS = 380;
+    const MOVE_CANCEL = 10;
+
+    let startX = 0, startY = 0, grabX = 0, grabY = 0, lastY = 0;
+    let pointerId = null;
+    let holdTimer = null, armTimer = null;
+    let mode = null; // null | 'swipe' | 'scroll' | 'drag'
+    let currentX = 0;
+    let placeholder = null;
+    let offX = 0, offY = 0;
+    let autoDir = 0, rafId = 0;
+
+    function preventTouch(e) { e.preventDefault(); }
+    function clearTimers() {
+      clearTimeout(holdTimer); holdTimer = null;
+      clearTimeout(armTimer); armTimer = null;
+      wrap.classList.remove('armed');
+    }
+
+    row.addEventListener('pointerdown', (e) => {
+      if (mode || pointerId !== null || !e.isPrimary) return;
+      pointerId = e.pointerId;
+      startX = grabX = e.clientX;
+      startY = grabY = lastY = e.clientY;
+      currentX = 0;
+      mode = null;
+      if (enableReorder) {
+        armTimer = setTimeout(() => { if (mode === null) wrap.classList.add('armed'); }, Math.max(0, HOLD_MS - 130));
+        holdTimer = setTimeout(startDrag, HOLD_MS);
+      }
+    });
+
+    row.addEventListener('pointermove', (e) => {
+      if (pointerId === null) return;
+      grabX = e.clientX; grabY = lastY = e.clientY;
+      const dx = e.clientX - startX;
+      const dy = e.clientY - startY;
+
+      if (mode === null) {
+        if (Math.abs(dx) + Math.abs(dy) > MOVE_CANCEL) {
+          clearTimers();
+          mode = Math.abs(dx) > Math.abs(dy) ? 'swipe' : 'scroll';
+          if (mode === 'swipe') {
+            row.style.transition = 'none';
+            try { row.setPointerCapture(pointerId); } catch (err) { /* noop */ }
+          }
+        }
+      }
+
+      if (mode === 'swipe') {
+        currentX = Math.min(0, Math.max(-ACTION_W, dx));
+        row.style.transform = 'translateX(' + currentX + 'px)';
+      } else if (mode === 'drag') {
+        e.preventDefault();
+        wrap.style.left = (e.clientX - offX) + 'px';
+        wrap.style.top = (e.clientY - offY) + 'px';
+        updatePlaceholder(e.clientY);
+        edgeAutoScroll(e.clientY);
+      }
+    });
+
+    function endPointer(isUp) {
+      if (pointerId === null) return;
+      const pid = pointerId;
+      const wasMode = mode;
+      pointerId = null;
+      clearTimers();
+
+      if (wasMode === 'drag') { finishDrag(pid); mode = null; return; }
+      try { row.releasePointerCapture(pid); } catch (err) { /* noop */ }
+
+      if (wasMode === 'swipe') {
+        row.style.transition = '';
+        const open = currentX < -(ACTION_W / 3);
+        row.style.transform = open ? 'translateX(-' + ACTION_W + 'px)' : '';
+        row.classList.toggle('swiped', open);
+        mode = null;
+        return;
+      }
+
+      mode = null;
+      if (wasMode === 'scroll' || !isUp) return;
+
+      if (row.classList.contains('swiped')) {
+        row.classList.remove('swiped');
+        row.style.transform = '';
+        return;
+      }
+      onOpen();
+    }
+    row.addEventListener('pointerup', () => endPointer(true));
+    row.addEventListener('pointercancel', () => endPointer(false));
+    row.addEventListener('contextmenu', (e) => { if (mode === 'drag' || wrap.classList.contains('armed')) e.preventDefault(); });
+
+    function startDrag() {
+      if (mode !== null || pointerId === null) return;
+      mode = 'drag';
+      wrap.classList.remove('armed');
+      row.classList.remove('swiped');
+      row.style.transition = '';
+      row.style.transform = '';
+      if (navigator.vibrate) { try { navigator.vibrate(12); } catch (err) { /* noop */ } }
+
+      const r = wrap.getBoundingClientRect();
+      offX = grabX - r.left;
+      offY = grabY - r.top;
+
+      placeholder = document.createElement('div');
+      placeholder.className = 'listRowPlaceholder';
+      placeholder.style.height = r.height + 'px';
+      wrap.parentNode.insertBefore(placeholder, wrap.nextSibling);
+
+      wrap.style.width = r.width + 'px';
+      wrap.style.left = r.left + 'px';
+      wrap.style.top = r.top + 'px';
+      wrap.classList.add('rowDragging');
+      listRows.classList.add('isDragging');
+
+      try { row.setPointerCapture(pointerId); } catch (err) { /* noop */ }
+      document.addEventListener('touchmove', preventTouch, { passive: false });
+    }
+
+    function fileWraps() {
+      return Array.prototype.filter.call(
+        listRows.querySelectorAll('.listRowWrap'),
+        (w) => w !== wrap && w.querySelector('.listRow[data-file-id]')
+      );
+    }
+    function updatePlaceholder(y) {
+      if (!placeholder) return;
+      const others = fileWraps();
+      if (!others.length) { listRows.appendChild(placeholder); return; }
+      let target = null;
+      for (let i = 0; i < others.length; i++) {
+        const rr = others[i].getBoundingClientRect();
+        if (y < rr.top + rr.height / 2) { target = others[i]; break; }
+      }
+      if (target) listRows.insertBefore(placeholder, target);
+      else listRows.insertBefore(placeholder, others[others.length - 1].nextSibling);
+    }
+    function edgeAutoScroll(y) {
+      const lr = listRows.getBoundingClientRect();
+      autoDir = y < lr.top + 52 ? -1 : (y > lr.bottom - 52 ? 1 : 0);
+      if (autoDir && !rafId) rafId = requestAnimationFrame(scrollTick);
+    }
+    function scrollTick() {
+      rafId = 0;
+      if (mode !== 'drag' || !autoDir) return;
+      listRows.scrollTop += autoDir * 9;
+      updatePlaceholder(lastY);
+      rafId = requestAnimationFrame(scrollTick);
+    }
+    function finishDrag(pid) {
+      document.removeEventListener('touchmove', preventTouch, { passive: false });
+      autoDir = 0;
+      if (rafId) { cancelAnimationFrame(rafId); rafId = 0; }
+      if (placeholder && placeholder.parentNode) {
+        listRows.insertBefore(wrap, placeholder);
+        placeholder.remove();
+      }
+      placeholder = null;
+      wrap.classList.remove('rowDragging');
+      wrap.style.width = wrap.style.left = wrap.style.top = '';
+      listRows.classList.remove('isDragging');
+      try { row.releasePointerCapture(pid); } catch (err) { /* noop */ }
+      commitOrderFromDom();
+    }
+  }
+
+  // DOM 上のファイル行の並びを savedFiles に反映（表示中の行だけを、その枠内で入れ替える）
+  function commitOrderFromDom() {
+    const shownIds = Array.prototype.map.call(
+      listRows.querySelectorAll('.listRow[data-file-id]'),
+      (r) => r.dataset.fileId
+    );
+    if (!shownIds.length) return;
+    const shown = new Set(shownIds);
+    const byId = new Map(savedFiles.map((f) => [f.id, f]));
+    const queue = shownIds.map((id) => byId.get(id)).filter(Boolean);
+    let qi = 0;
+    savedFiles = savedFiles.map((f) => (shown.has(f.id) ? queue[qi++] : f));
+    persistSavedFiles();
   }
 
   // ---------- フォルダ移動ピッカー ----------
