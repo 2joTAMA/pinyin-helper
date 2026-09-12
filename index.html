@@ -115,6 +115,19 @@
     flex:0 0 auto;
   }
   #toneToggle.active{ border-color:var(--seal); color:var(--seal); }
+  #toneToggle[disabled]{ opacity:0.35; pointer-events:none; }
+  #contourToggle{
+    display:flex; align-items:center; justify-content:center;
+    padding:5px 9px;
+    margin-left:4px;
+    border:1px solid var(--line);
+    border-radius:999px;
+    background:none;
+    color:var(--paper-dim);
+    flex:0 0 auto;
+  }
+  #contourToggle svg{ width:15px; height:15px; display:block; }
+  #contourToggle.active{ border-color:var(--seal); color:var(--seal); }
   #focusToggle{
     display:flex; align-items:center; justify-content:center;
     padding:5px 13px;
@@ -272,6 +285,17 @@
     font-size:13px;
   }
 
+  /* ---------- 声調カーブ表示（アルファベット非表示モード） ---------- */
+  .contourRow{ display:flex; flex-wrap:wrap; align-items:flex-start; }
+  .cCol{ display:inline-flex; flex-direction:column; align-items:center; }
+  .cChar{
+    font-size:23px;
+    line-height:1.45;
+    color:var(--paper);
+  }
+  .cTone{ width:19px; height:9px; margin-top:2px; }
+  .cTone svg{ width:100%; height:100%; display:block; color:var(--seal); }
+
   /* ---------- kanji grid (単漢字モード) ---------- */
   #kanjiGrid{
     flex:1 1 auto;
@@ -299,6 +323,9 @@
     font-size:9px; font-weight:700; line-height:1;
     color:var(--seal);
   }
+  .kcard.contourOn{ flex-direction:column; gap:1px; }
+  .kcontour{ width:22px; height:10px; }
+  .kcontour svg{ width:100%; height:100%; display:block; color:var(--seal); }
   .kcard.dragging{
     position:fixed; z-index:80;
     background:var(--ink-soft); border:1px solid var(--seal); border-radius:8px;
@@ -521,6 +548,9 @@
       <button class="tabBtn" data-mode="kanji" type="button">単漢字モード</button>
     </div>
     <button id="toneToggle" type="button" aria-pressed="false" title="声調を数字でも表示">123</button>
+    <button id="contourToggle" type="button" aria-pressed="false" title="声調を高低カーブの記号で表示（アルファベット非表示）">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 17 L9 7 L15 7 L20 17"></path></svg>
+    </button>
     <button id="focusToggle" type="button" aria-pressed="false" title="入力欄を畳んで広く表示">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 11 12 6 7 11"></polyline><polyline points="17 18 12 13 7 18"></polyline></svg>
     </button>
@@ -652,6 +682,7 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
 
   const tabBtns = document.querySelectorAll('.tabBtn');
   const toneToggle = document.getElementById('toneToggle');
+  const contourToggle = document.getElementById('contourToggle');
   const focusToggle = document.getElementById('focusToggle');
 
   const kanjiToolbar = document.getElementById('kanjiToolbar');
@@ -709,6 +740,7 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
   const state = {
     mode: 'sentence',      // 'sentence' | 'kanji'
     toneType: 'symbol',    // 'symbol' | 'num' (どちらか一方のみ表示。併記はしない)
+    contourOn: false,      // true のときはアルファベットを隠し、声調を高低カーブのSVG記号で表示する
     reordering: false,
     focusMode: false,
   };
@@ -769,9 +801,24 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
     if (!pp || !pp.pinyin) return '';
     try {
       const withNum = pp.pinyin(ch, { toneType: 'num', multiple: false }) || '';
-      const m = withNum.match(/([1-5])$/);
+      // pinyin-proは軽声を末尾「0」で表す（「5」ではない）ので両方拾う
+      const m = withNum.match(/([0-5])$/);
       return m ? m[1] : '';
     } catch (e) { return ''; }
+  }
+  // 声調番号を高低カーブのSVG記号に変換する（contourモード用。軽声(0または5)は点で表す）
+  const TONE_CONTOUR_SHAPE = {
+    '1': '<line x1="3" y1="3" x2="17" y2="3" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>',
+    '2': '<line x1="3" y1="9" x2="17" y2="3" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>',
+    '3': '<line x1="3" y1="9" x2="17" y2="9" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>',
+    '4': '<line x1="3" y1="3" x2="17" y2="9" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>',
+    '0': '<circle cx="10" cy="6" r="2.3" fill="currentColor"/>',
+    '5': '<circle cx="10" cy="6" r="2.3" fill="currentColor"/>',
+  };
+  function toneContourSVG(digit) {
+    const shape = TONE_CONTOUR_SHAPE[digit];
+    if (!shape) return '';
+    return '<svg viewBox="0 0 20 12">' + shape + '</svg>';
   }
   function escapeHtml(s) {
     return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -789,6 +836,46 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
     return groups
       .map((group) => group.map((g) => g.result).join(''))
       .join(' ');
+  }
+
+  // 文章モード用：漢字1文字ずつの下にその声調カーブSVGを揃えて配置する（アルファベット非表示）
+  function buildContourBlock(normalizedLine) {
+    const block = document.createElement('div');
+    block.className = 'lineBlock contourBlock';
+
+    const row = document.createElement('div');
+    row.className = 'contourRow';
+
+    let groups = [];
+    if (pp && pp.segment) {
+      try {
+        groups = pp.segment(normalizedLine, { format: pp.OutputFormat.AllArray, toneType: 'num' });
+      } catch (e) { groups = []; }
+    }
+    const chars = groups.length
+      ? groups.reduce((acc, g) => acc.concat(g), [])
+      : Array.from(normalizedLine).map((c) => ({ origin: c, result: c }));
+
+    chars.forEach(({ origin, result }) => {
+      const col = document.createElement('span');
+      col.className = 'cCol';
+
+      const charEl = document.createElement('span');
+      charEl.className = 'cChar';
+      charEl.textContent = origin;
+      col.appendChild(charEl);
+
+      const toneEl = document.createElement('span');
+      toneEl.className = 'cTone';
+      const m = /([0-5])$/.exec(result || '');
+      if (m) toneEl.innerHTML = toneContourSVG(m[1]);
+      col.appendChild(toneEl);
+
+      row.appendChild(col);
+    });
+
+    block.appendChild(row);
+    return block;
   }
 
   // ================= surume（背景キャラ） =================
@@ -867,6 +954,12 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
       if (line.trim() === '') return;
 
       const normalized = normalizeToSimplified(line);
+
+      if (state.contourOn) {
+        frag.appendChild(buildContourBlock(normalized));
+        return;
+      }
+
       const pyText = lineToPinyin(normalized);
 
       const block = document.createElement('div');
@@ -914,19 +1007,25 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
   // mismatch=true のときは、そのグループの代表音と読みが違う＝警告色で表示。
   function makeCard(ch, mismatch) {
     const card = document.createElement('div');
-    card.className = 'kcard';
+    card.className = 'kcard' + (state.contourOn ? ' contourOn' : '');
     card.dataset.char = ch;
 
     const hz = document.createElement('span');
     hz.className = 'khz' + (mismatch ? ' mismatch' : '');
     hz.textContent = ch;
-
-    const tone = document.createElement('span');
-    tone.className = 'ktone';
-    tone.textContent = state.toneType === 'num' ? getToneDigit(ch) : '';
-
     card.appendChild(hz);
-    card.appendChild(tone);
+
+    if (state.contourOn) {
+      const contour = document.createElement('span');
+      contour.className = 'kcontour';
+      contour.innerHTML = toneContourSVG(getToneDigit(ch));
+      card.appendChild(contour);
+    } else {
+      const tone = document.createElement('span');
+      tone.className = 'ktone';
+      tone.textContent = state.toneType === 'num' ? getToneDigit(ch) : '';
+      card.appendChild(tone);
+    }
     return card;
   }
 
@@ -1134,6 +1233,14 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
     state.toneType = state.toneType === 'symbol' ? 'num' : 'symbol';
     toneToggle.classList.toggle('active', state.toneType === 'num');
     toneToggle.setAttribute('aria-pressed', state.toneType === 'num' ? 'true' : 'false');
+    renderCurrentMode();
+  });
+
+  contourToggle.addEventListener('click', () => {
+    state.contourOn = !state.contourOn;
+    contourToggle.classList.toggle('active', state.contourOn);
+    contourToggle.setAttribute('aria-pressed', state.contourOn ? 'true' : 'false');
+    toneToggle.disabled = state.contourOn;
     renderCurrentMode();
   });
 
