@@ -375,6 +375,7 @@
     border-bottom:1px solid var(--line);
     background:var(--ink-soft);
   }
+  #listHeaderActions{ display:flex; align-items:center; gap:0; flex:0 0 auto; }
   #listRows{ flex:1 1 auto; overflow-y:auto; padding:2px 16px 16px; }
   .listEmpty{ padding:40px 8px; text-align:center; color:var(--paper-dim); font-size:13px; }
   .listRowWrap{ position:relative; overflow:hidden; border-bottom:1px dashed var(--line); }
@@ -615,9 +616,18 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
       </button>
       <span class="brand" id="listBrand">保存一覧</span>
-      <button id="listNewBtn" class="iconBtn" type="button" aria-label="新規作成" title="新規作成">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-      </button>
+      <div id="listHeaderActions">
+        <button id="exportBtn" class="iconBtn" type="button" aria-label="バックアップを書き出す" title="バックアップを書き出す（JSONファイル）">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"></path><polyline points="7 10 12 15 17 10"></polyline><path d="M4 19h16"></path></svg>
+        </button>
+        <button id="importBtn" class="iconBtn" type="button" aria-label="バックアップを読み込む" title="バックアップを読み込む（JSONファイル）">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3"></path><polyline points="7 8 12 3 17 8"></polyline><path d="M4 19h16"></path></svg>
+        </button>
+        <input id="importFileInput" type="file" accept="application/json,.json" hidden>
+        <button id="listNewBtn" class="iconBtn" type="button" aria-label="新規作成" title="新規作成">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+        </button>
+      </div>
     </header>
     <div id="listSearchBar">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
@@ -706,6 +716,9 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
   const newBtn = document.getElementById('newBtn');
   const listRows = document.getElementById('listRows');
   const listBrand = document.getElementById('listBrand');
+  const exportBtn = document.getElementById('exportBtn');
+  const importBtn = document.getElementById('importBtn');
+  const importFileInput = document.getElementById('importFileInput');
   const listSearchInput = document.getElementById('listSearchInput');
   const listSearchClear = document.getElementById('listSearchClear');
 
@@ -1332,6 +1345,91 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
     try { localStorage.setItem(FOLDER_KEY, JSON.stringify(folders)); } catch (e) { /* noop */ }
   }
   let folders = loadFolders();
+
+  // ---------- バックアップの書き出し／読み込み ----------
+  // ホーム画面アプリはブラウザ側の事情でデータ領域が消えることがあるため、
+  // 手元にJSONファイルとして退避・復元できるようにする。
+  function exportBackup() {
+    const payload = {
+      app: 'pinyin-helper',
+      version: 1,
+      exportedAt: Date.now(),
+      savedFiles: savedFiles,
+      folders: folders,
+    };
+    const json = JSON.stringify(payload, null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const pad = (n) => String(n).padStart(2, '0');
+    const d = new Date();
+    const stamp = d.getFullYear() + pad(d.getMonth() + 1) + pad(d.getDate()) + '-' + pad(d.getHours()) + pad(d.getMinutes());
+
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'pinyin-helper-backup-' + stamp + '.json';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+  }
+
+  // 既存データは残したまま、IDが重複しないファイル・フォルダだけを追加する（上書きしない）
+  function mergeImportedBackup(data) {
+    const importedFolders = Array.isArray(data.folders) ? data.folders : [];
+    const importedFiles = Array.isArray(data.savedFiles) ? data.savedFiles : [];
+
+    const existingFolderIds = new Set(folders.map((f) => f.id));
+    importedFolders.forEach((f) => {
+      if (f && f.id && !existingFolderIds.has(f.id)) {
+        folders.push(f);
+        existingFolderIds.add(f.id);
+      }
+    });
+
+    const existingFileIds = new Set(savedFiles.map((f) => f.id));
+    let addedCount = 0;
+    importedFiles.forEach((f) => {
+      if (f && f.id && !existingFileIds.has(f.id)) {
+        savedFiles.push(f);
+        existingFileIds.add(f.id);
+        addedCount += 1;
+      }
+    });
+
+    persistFolders();
+    persistSavedFiles();
+    return addedCount;
+  }
+
+  exportBtn.addEventListener('click', exportBackup);
+  importBtn.addEventListener('click', () => importFileInput.click());
+  importFileInput.addEventListener('change', () => {
+    const file = importFileInput.files && importFileInput.files[0];
+    importFileInput.value = '';
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      let data;
+      try {
+        data = JSON.parse(String(reader.result));
+      } catch (e) {
+        alert('ファイルの読み込みに失敗しました（JSON形式が正しくないようです）');
+        return;
+      }
+      if (!data || (!Array.isArray(data.savedFiles) && !Array.isArray(data.folders))) {
+        alert('このファイルはバックアップ形式ではないようです');
+        return;
+      }
+      const added = mergeImportedBackup(data);
+      updateListChrome();
+      renderListRows();
+      alert(added > 0
+        ? added + '件のファイルを読み込みました（既存のデータはそのまま残っています）'
+        : '新しく追加されたファイルはありませんでした（すでに読み込み済みの可能性があります）');
+    };
+    reader.readAsText(file);
+  });
 
   // 保存一覧の表示状態： folderId=null はルート、query は検索文字列
   const listView = { folderId: null, query: '' };
