@@ -115,7 +115,6 @@
     flex:0 0 auto;
   }
   #toneToggle.active{ border-color:var(--seal); color:var(--seal); }
-  #toneToggle[disabled]{ opacity:0.35; pointer-events:none; }
   #contourToggle{
     display:flex; align-items:center; justify-content:center;
     padding:5px 9px;
@@ -1244,7 +1243,15 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
   });
 
   toneToggle.addEventListener('click', () => {
-    state.toneType = state.toneType === 'symbol' ? 'num' : 'symbol';
+    if (state.contourOn) {
+      // 記号モード中に押した場合は、記号モードを抜けて数字モードへ切り替える
+      state.contourOn = false;
+      contourToggle.classList.remove('active');
+      contourToggle.setAttribute('aria-pressed', 'false');
+      state.toneType = 'num';
+    } else {
+      state.toneType = state.toneType === 'symbol' ? 'num' : 'symbol';
+    }
     toneToggle.classList.toggle('active', state.toneType === 'num');
     toneToggle.setAttribute('aria-pressed', state.toneType === 'num' ? 'true' : 'false');
     renderCurrentMode();
@@ -1254,7 +1261,6 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
     state.contourOn = !state.contourOn;
     contourToggle.classList.toggle('active', state.contourOn);
     contourToggle.setAttribute('aria-pressed', state.contourOn ? 'true' : 'false');
-    toneToggle.disabled = state.contourOn;
     renderCurrentMode();
   });
 
