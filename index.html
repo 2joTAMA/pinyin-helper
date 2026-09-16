@@ -188,20 +188,20 @@
     transition:opacity .2s ease;
   }
   body.focusMode .inputTools{ opacity:0; pointer-events:none; }
-  /* 入力欄の右下からはみ出す形で貼り付いたトグル。畳んでいる間も常にクリックできる */
+  /* 入力欄の下端にぴったり貼り付いた取っ手（フィールドの文字部分とは重ならない）。畳んでいる間も常にクリックできる */
   #focusToggle{
-    position:absolute; right:14px; bottom:-15px; z-index:3;
+    position:absolute; right:14px; bottom:-12px; z-index:3;
     display:flex; align-items:center; justify-content:center;
-    width:30px; height:30px;
+    width:44px; height:20px;
     padding:0;
-    border:1px solid var(--line);
-    border-radius:999px;
-    background:var(--ink-soft);
-    color:var(--paper-dim);
-    box-shadow:0 2px 5px rgba(0,0,0,0.3);
+    border:none;
+    border-radius:0 0 10px 10px;
+    background:var(--input-bg);
+    color:var(--input-text);
+    box-shadow:0 3px 5px rgba(0,0,0,0.35);
   }
-  #focusToggle svg{ width:14px; height:14px; display:block; transition:transform .2s ease; }
-  #focusToggle.active{ border-color:var(--seal); color:var(--seal); }
+  #focusToggle svg{ width:13px; height:13px; display:block; transition:transform .2s ease; }
+  #focusToggle.active{ color:var(--seal); }
   #focusToggle.active svg{ transform:rotate(180deg); }
   .miniBtn{
     width:22px; height:22px; border-radius:999px;
@@ -376,13 +376,27 @@
   }
   .modalTitle{ font-size:16px; font-weight:700; color:var(--paper); margin-bottom:14px; }
   .modalLabel{ font-size:12px; color:var(--paper-dim); margin-bottom:6px; }
+  .modalInputWrap{ position:relative; }
   .modalInput{
     width:100%; background:var(--input-bg); color:var(--input-text);
-    border:none; border-radius:8px; padding:10px 12px;
+    border:none; border-radius:8px; padding:10px 34px 10px 12px;
     font-size:15px; margin-bottom:6px;
     font-family:inherit;
   }
   .modalInput:focus{ outline:2px solid var(--seal); }
+  .modalClearBtn{
+    position:absolute; top:0; bottom:6px; right:8px;
+    margin:auto 0;
+    width:22px; height:22px; border-radius:999px;
+    background:rgba(42,38,32,0.18);
+    border:none;
+    display:flex; align-items:center; justify-content:center;
+    color:var(--input-text);
+    padding:0;
+    visibility:hidden;
+  }
+  .modalClearBtn.show{ visibility:visible; }
+  .modalClearBtn svg{ width:12px; height:12px; display:block; }
   .modalHint{ font-size:11px; color:var(--paper-dim); margin-bottom:20px; }
   .modalActions{ display:flex; gap:10px; justify-content:flex-end; }
   .modalBtnGhost{ background:transparent; border:none; color:var(--paper-dim); font-size:14px; padding:10px 12px; }
@@ -414,6 +428,7 @@
   }
   .rowActionBtn svg{ width:15px; height:15px; }
   .actMove{ background:var(--paper-dim); color:var(--ink); }
+  .actDuplicate{ background:var(--seal-soft); color:var(--paper); }
   .actDelete{ background:var(--seal); color:var(--ink); }
   .listRow{
     position:relative; background:var(--ink);
@@ -434,9 +449,15 @@
     white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0;
   }
   .listMeta{ flex:0 0 auto; display:flex; align-items:center; gap:8px; }
-  .listBadge{ font-size:10px; font-weight:700; padding:3px 8px; border-radius:999px; white-space:nowrap; }
-  .badgeSentence{ background:rgba(201,112,79,0.15); color:var(--seal); }
-  .badgeKanji{ background:rgba(217,208,189,0.12); color:var(--paper-dim); border:1px solid var(--line); }
+  .listEditBtn{
+    display:flex; align-items:center; justify-content:center;
+    width:24px; height:24px; flex:0 0 auto;
+    border:none; background:none;
+    color:var(--paper-dim);
+    padding:0;
+  }
+  .listEditBtn svg{ width:13px; height:13px; display:block; }
+  .listEditBtn:active{ color:var(--seal); }
 
   /* 長押しでファイル行を掴んで並び替え */
   .listRowWrap.armed .listRow{ transform:scale(0.97); transition:transform .12s ease; }
@@ -638,7 +659,12 @@
     <div class="modalCard">
       <div class="modalTitle" id="modalHeading">保存</div>
       <div class="modalLabel">サブタイトル（任意）</div>
-      <input id="modalTitleInput" class="modalInput" type="text" autocomplete="off" />
+      <div class="modalInputWrap">
+        <input id="modalTitleInput" class="modalInput" type="text" autocomplete="off" />
+        <button id="modalClearBtn" class="modalClearBtn" type="button" title="クリア" aria-label="クリア">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="5" y1="5" x2="19" y2="19"></line><line x1="19" y1="5" x2="5" y2="19"></line></svg>
+        </button>
+      </div>
       <div class="modalHint">タイトルは内容から自動でつきます。空欄でも保存できます</div>
       <div class="modalActions">
         <button id="modalCancelBtn" class="modalBtnGhost" type="button">キャンセル</button>
@@ -745,6 +771,7 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
   const saveModal = document.getElementById('saveModal');
   const modalHeading = document.getElementById('modalHeading');
   const modalTitleInput = document.getElementById('modalTitleInput');
+  const modalClearBtn = document.getElementById('modalClearBtn');
   const modalCancelBtn = document.getElementById('modalCancelBtn');
   const modalSaveBtn = document.getElementById('modalSaveBtn');
 
@@ -1541,6 +1568,7 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
   const MOVE_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"></path><polyline points="9 13 12 10 15 13"></polyline><line x1="12" y1="10" x2="12" y2="17"></line></svg>';
   const PENCIL_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg>';
   const CHECK_SVG = '<svg class="pickCheck" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+  const COPY_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="1.5"></rect><path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1"></path></svg>';
 
   // サブタイトル（自由記述）を1行目ヘッダーに表示
   function setSubtitleDisplay(subtitle) {
@@ -1597,13 +1625,23 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
     saveBtn.classList.toggle('dirty', isDirty());
   }
 
-  let modalContext = null; // { mode: 'new' | 'rename' }
+  let modalContext = null; // { mode: 'new' } | { mode: 'rename', fileId }
+
+  function updateModalClearBtn() {
+    modalClearBtn.classList.toggle('show', modalTitleInput.value.length > 0);
+  }
 
   function openSaveModal(ctx) {
     modalContext = ctx;
     modalHeading.textContent = ctx.mode === 'rename' ? 'サブタイトルを編集' : '保存';
-    modalTitleInput.value = ctx.mode === 'rename' ? fileTitle.textContent : '';
+    if (ctx.mode === 'rename') {
+      const f = savedFiles.find((x) => x.id === ctx.fileId);
+      modalTitleInput.value = f ? (f.subtitle || '') : '';
+    } else {
+      modalTitleInput.value = '';
+    }
     modalTitleInput.placeholder = '例）挨拶フレーズまとめ';
+    updateModalClearBtn();
     saveModal.hidden = false;
     setTimeout(() => modalTitleInput.focus(), 0);
   }
@@ -1633,11 +1671,17 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
 
   renameBtn.addEventListener('click', () => {
     if (!currentFileId) { openSaveModal({ mode: 'new' }); return; }
-    openSaveModal({ mode: 'rename' });
+    openSaveModal({ mode: 'rename', fileId: currentFileId });
   });
 
   modalCancelBtn.addEventListener('click', closeSaveModal);
   saveModal.addEventListener('click', (e) => { if (e.target === saveModal) closeSaveModal(); });
+  modalTitleInput.addEventListener('input', updateModalClearBtn);
+  modalClearBtn.addEventListener('click', () => {
+    modalTitleInput.value = '';
+    updateModalClearBtn();
+    modalTitleInput.focus();
+  });
   modalTitleInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') { e.preventDefault(); modalSaveBtn.click(); }
   });
@@ -1647,12 +1691,13 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
     const subtitle = modalTitleInput.value.trim();
 
     if (modalContext.mode === 'rename') {
-      const idx = savedFiles.findIndex((f) => f.id === currentFileId);
+      const idx = savedFiles.findIndex((f) => f.id === modalContext.fileId);
       if (idx >= 0) {
         savedFiles[idx].subtitle = subtitle;
         persistSavedFiles();
       }
-      setSubtitleDisplay(subtitle);
+      if (modalContext.fileId === currentFileId) setSubtitleDisplay(subtitle);
+      if (!listScreen.hidden) renderListRows();
     } else {
       if (state.mode === 'kanji') performGrouping(); // 保存時は自動で再グループ化する
       const file = {
@@ -1772,6 +1817,18 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
     inFolder.forEach((file) => listRows.appendChild(makeListRow(file, {})));
   }
 
+  // 保存済みファイルを複製する。複製は元ファイルのすぐ後ろに挿入する
+  function duplicateFile(file) {
+    const copy = Object.assign({}, file, {
+      id: 'f' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8),
+      updatedAt: Date.now(),
+    });
+    const idx = savedFiles.findIndex((f) => f.id === file.id);
+    savedFiles.splice(idx + 1, 0, copy);
+    persistSavedFiles();
+    renderListRows();
+  }
+
   function makeListRow(file, opts) {
     opts = opts || {};
     const wrap = document.createElement('div');
@@ -1789,6 +1846,15 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
       openFolderPicker(file);
     });
 
+    const dup = document.createElement('button');
+    dup.type = 'button';
+    dup.className = 'rowActionBtn actDuplicate';
+    dup.innerHTML = COPY_SVG + '<span>複製</span>';
+    dup.addEventListener('click', (e) => {
+      e.stopPropagation();
+      duplicateFile(file);
+    });
+
     const del = document.createElement('button');
     del.type = 'button';
     del.className = 'rowActionBtn actDelete';
@@ -1801,6 +1867,7 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
       renderListRows();
     });
     actions.appendChild(moveBtn);
+    actions.appendChild(dup);
     actions.appendChild(del);
 
     const row = document.createElement('div');
@@ -1832,10 +1899,19 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
       meta.appendChild(chip);
     }
 
-    const badge = document.createElement('span');
-    badge.className = 'listBadge ' + (file.mode === 'kanji' ? 'badgeKanji' : 'badgeSentence');
-    badge.textContent = file.mode === 'kanji' ? '単漢字' : '文章';
-    meta.appendChild(badge);
+    const editBtn = document.createElement('button');
+    editBtn.type = 'button';
+    editBtn.className = 'listEditBtn';
+    editBtn.innerHTML = PENCIL_SVG;
+    editBtn.setAttribute('aria-label', 'サブタイトルを編集');
+    editBtn.title = 'サブタイトルを編集';
+    // editBtnはrow内部の子要素なので、rowのタップ判定（ファイルを開く）に巻き込まれないようpointerdown段階で止める
+    editBtn.addEventListener('pointerdown', (e) => e.stopPropagation());
+    editBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openSaveModal({ mode: 'rename', fileId: file.id });
+    });
+    meta.appendChild(editBtn);
 
     row.appendChild(titleWrap);
     row.appendChild(meta);
@@ -1956,7 +2032,7 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
 
   // ファイル行のジェスチャ：タップで開く／左スワイプでアクション表示／長押しで並び替え
   function attachFileRowGestures(wrap, row, onOpen, enableReorder) {
-    const ACTION_W = 128;
+    const ACTION_W = 192; // 移動・複製・削除の3ボタン分（64px × 3）
     const HOLD_MS = 380;
     const MOVE_CANCEL = 10;
 
