@@ -87,6 +87,21 @@
   #saveBtn svg{ width:12px; height:12px; display:block; }
   #saveBtn.justSaved{ background:var(--seal); border-color:var(--seal); color:var(--ink); }
 
+  /* ---------- auto-title sub header ---------- */
+  #subHeader{
+    flex:0 0 auto;
+    display:flex; align-items:center; justify-content:center;
+    padding:4px 12px;
+    background:rgba(201,112,79,0.09);
+    border-bottom:1px solid var(--line);
+  }
+  #autoTitleText{
+    font-size:12px; font-weight:600; color:var(--seal);
+    letter-spacing:0.3px;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    max-width:100%;
+  }
+
   /* ---------- mode bar ---------- */
   #modeBar{
     flex:0 0 auto;
@@ -231,6 +246,7 @@
   #doneBtn svg{ width:12px; height:12px; }
 
   body.reordering #topHeader,
+  body.reordering #subHeader,
   body.reordering #modeBar,
   body.reordering #inputWrap{
     opacity:0.32; filter:grayscale(0.4); pointer-events:none;
@@ -399,6 +415,12 @@
     flex:1 1 auto; min-width:0; font-size:14px; font-weight:600; color:var(--paper);
     white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
   }
+  .listTitleWrap{ flex:1 1 auto; min-width:0; display:flex; flex-direction:column; gap:2px; }
+  .listTitleWrap .listTitle{ flex:0 0 auto; }
+  .listSubtitle{
+    font-size:11px; font-weight:500; color:var(--seal);
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0;
+  }
   .listMeta{ flex:0 0 auto; display:flex; align-items:center; gap:8px; }
   .listBadge{ font-size:10px; font-weight:700; padding:3px 8px; border-radius:999px; white-space:nowrap; }
   .badgeSentence{ background:rgba(201,112,79,0.15); color:var(--seal); }
@@ -528,8 +550,8 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="6" x2="20" y2="6"></line><line x1="4" y1="12" x2="20" y2="12"></line><line x1="4" y1="18" x2="14" y2="18"></line></svg>
     </button>
     <div id="titleWrap">
-      <span id="fileTitle">無題</span>
-      <button id="renameBtn" class="iconBtn" type="button" aria-label="タイトルを編集" title="タイトルを編集">
+      <span id="fileTitle"></span>
+      <button id="renameBtn" class="iconBtn" type="button" aria-label="サブタイトルを編集" title="サブタイトルを編集">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg>
       </button>
     </div>
@@ -541,6 +563,10 @@
       保存
     </button>
   </header>
+
+  <div id="subHeader">
+    <span id="autoTitleText"></span>
+  </div>
 
   <div id="modeBar">
     <div class="tabs">
@@ -599,9 +625,9 @@
   <div id="saveModal" class="modalOverlay" hidden>
     <div class="modalCard">
       <div class="modalTitle" id="modalHeading">保存</div>
-      <div class="modalLabel">タイトル</div>
+      <div class="modalLabel">サブタイトル（任意）</div>
       <input id="modalTitleInput" class="modalInput" type="text" autocomplete="off" />
-      <div class="modalHint">未入力の場合、先頭の文字が自動でタイトルになります</div>
+      <div class="modalHint">タイトルは内容から自動でつきます。空欄でも保存できます</div>
       <div class="modalActions">
         <button id="modalCancelBtn" class="modalBtnGhost" type="button">キャンセル</button>
         <button id="modalSaveBtn" class="modalBtnPrimary" type="button">保存する</button>
@@ -688,6 +714,7 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
   const saveBtn = document.getElementById('saveBtn');
   const fileTitle = document.getElementById('fileTitle');
   const renameBtn = document.getElementById('renameBtn');
+  const autoTitleText = document.getElementById('autoTitleText');
 
   const tabBtns = document.querySelectorAll('.tabBtn');
   const toneToggle = document.getElementById('toneToggle');
@@ -1277,6 +1304,7 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
     const trimmed = input.value ? input.value.trim() : '';
     updateSurume(trimmed !== '');
     clearBtn.classList.toggle('show', input.value.length > 0);
+    updateAutoTitleDisplay();
 
     if (state.mode === 'sentence') {
       results.hidden = false;
@@ -1328,6 +1356,20 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(savedFiles)); } catch (e) { /* noop */ }
   }
   let savedFiles = loadSavedFiles();
+
+  // 旧形式（title が自由記述のタイトルだった）からの移行：
+  // 旧タイトルはサブタイトルへ回し、タイトルは内容から自動生成し直す
+  (function migrateTitlesToAutoTitle() {
+    let changed = false;
+    savedFiles.forEach((f) => {
+      if (typeof f.subtitle !== 'string') {
+        f.subtitle = f.title || '';
+        f.title = computeAutoTitle(f.mode, f.text || '');
+        changed = true;
+      }
+    });
+    if (changed) persistSavedFiles();
+  })();
 
   // 一覧の並び順を「更新日時順」から「手動（配列順）」へ一度だけ移行する。
   // 既存ユーザーには、今まで見えていた並び（新しい順）をそのまま初期の手動順として渡す。
@@ -1397,6 +1439,10 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
     let addedCount = 0;
     importedFiles.forEach((f) => {
       if (f && f.id && !existingFileIds.has(f.id)) {
+        if (typeof f.subtitle !== 'string') {
+          f.subtitle = f.title || '';
+          f.title = computeAutoTitle(f.mode, f.text || '');
+        }
         savedFiles.push(f);
         existingFileIds.add(f.id);
         addedCount += 1;
@@ -1464,6 +1510,7 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
     const query = q.trim();
     if (!query) return true;
     if ((file.title || '').toLowerCase().indexOf(query.toLowerCase()) >= 0) return true;
+    if ((file.subtitle || '').toLowerCase().indexOf(query.toLowerCase()) >= 0) return true;
     const text = normalizeToSimplified(file.text || '');
     if (text.indexOf(query) >= 0) return true;
     const hanziChars = [];
@@ -1482,14 +1529,35 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
   const PENCIL_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg>';
   const CHECK_SVG = '<svg class="pickCheck" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
 
-  function setFileTitle(title) {
-    fileTitle.textContent = title || '無題';
+  // サブタイトル（自由記述）を1行目ヘッダーに表示
+  function setSubtitleDisplay(subtitle) {
+    fileTitle.textContent = subtitle || '';
   }
 
+  // 文章モードの自動タイトル：先頭の文字を適度な文字数だけ抽出
   function defaultTitleFromText(text) {
     const flat = text.replace(/\s+/g, '').trim();
     if (!flat) return '無題';
     return flat.length > 14 ? flat.slice(0, 14) + '…' : flat;
+  }
+
+  // 単漢字モードの自動タイトル：各文字のピンイン（アルファベットのみ）を半角スペースで連結
+  function kanjiAutoTitle(text) {
+    const lines = parseKanjiLines(text);
+    const chars = [];
+    lines.forEach((line) => chars.push.apply(chars, line));
+    if (!chars.length) return '無題';
+    return chars.map((ch) => getBasePinyin(ch) || ch).join(' ');
+  }
+
+  // モードに応じた自動タイトルを算出する
+  function computeAutoTitle(mode, text) {
+    return mode === 'kanji' ? kanjiAutoTitle(text) : defaultTitleFromText(text);
+  }
+
+  // 2行目ヘッダーの自動タイトルを、現在の入力内容から更新する
+  function updateAutoTitleDisplay() {
+    autoTitleText.textContent = computeAutoTitle(state.mode, input.value);
   }
 
   function flashSaved() {
@@ -1501,7 +1569,7 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
 
   function openSaveModal(ctx) {
     modalContext = ctx;
-    modalHeading.textContent = ctx.mode === 'rename' ? 'タイトルを変更' : '保存';
+    modalHeading.textContent = ctx.mode === 'rename' ? 'サブタイトルを編集' : '保存';
     modalTitleInput.value = ctx.mode === 'rename' ? fileTitle.textContent : '';
     modalTitleInput.placeholder = '例）挨拶フレーズまとめ';
     saveModal.hidden = false;
@@ -1518,6 +1586,7 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
       if (idx >= 0) {
         savedFiles[idx].text = input.value;
         savedFiles[idx].mode = state.mode;
+        savedFiles[idx].title = computeAutoTitle(state.mode, input.value);
         savedFiles[idx].updatedAt = Date.now();
         persistSavedFiles();
         flashSaved();
@@ -1540,20 +1609,20 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
 
   modalSaveBtn.addEventListener('click', () => {
     if (!modalContext) return;
-    const typed = modalTitleInput.value.trim();
-    const title = typed || defaultTitleFromText(input.value);
+    const subtitle = modalTitleInput.value.trim();
 
     if (modalContext.mode === 'rename') {
       const idx = savedFiles.findIndex((f) => f.id === currentFileId);
       if (idx >= 0) {
-        savedFiles[idx].title = title;
+        savedFiles[idx].subtitle = subtitle;
         persistSavedFiles();
       }
-      setFileTitle(title);
+      setSubtitleDisplay(subtitle);
     } else {
       const file = {
         id: 'f' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8),
-        title: title,
+        title: computeAutoTitle(state.mode, input.value),
+        subtitle: subtitle,
         mode: state.mode,
         text: input.value,
         folderId: listView.folderId || null,
@@ -1562,7 +1631,7 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
       savedFiles.unshift(file); // 新規保存は一覧の先頭へ。以降は手動の並び順を保持
       persistSavedFiles();
       currentFileId = file.id;
-      setFileTitle(title);
+      setSubtitleDisplay(subtitle);
     }
     closeSaveModal();
   });
@@ -1700,9 +1769,20 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
     row.className = 'listRow';
     row.dataset.fileId = file.id;
 
+    const titleWrap = document.createElement('span');
+    titleWrap.className = 'listTitleWrap';
+
     const title = document.createElement('span');
     title.className = 'listTitle';
     title.textContent = file.title;
+    titleWrap.appendChild(title);
+
+    if (file.subtitle) {
+      const subtitle = document.createElement('span');
+      subtitle.className = 'listSubtitle';
+      subtitle.textContent = file.subtitle;
+      titleWrap.appendChild(subtitle);
+    }
 
     const meta = document.createElement('span');
     meta.className = 'listMeta';
@@ -1719,7 +1799,7 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
     badge.textContent = file.mode === 'kanji' ? '単漢字' : '文章';
     meta.appendChild(badge);
 
-    row.appendChild(title);
+    row.appendChild(titleWrap);
     row.appendChild(meta);
 
     wrap.appendChild(actions);
@@ -2102,7 +2182,7 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
 
   function loadFile(file) {
     currentFileId = file.id;
-    setFileTitle(file.title);
+    setSubtitleDisplay(file.subtitle);
     state.mode = file.mode || 'sentence';
     updateModeTabsUI();
     commitInputValue(file.text || '', { skipUndo: true });
@@ -2113,7 +2193,7 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
 
   function startNewFile() {
     currentFileId = null;
-    setFileTitle('無題');
+    setSubtitleDisplay('');
     commitInputValue('', { skipUndo: true });
     undoStack = [];
     undoBtn.disabled = true;
@@ -2159,7 +2239,7 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
 
   // ================= 起動 =================
   lastCommittedValue = input.value;
-  setFileTitle('無題');
+  setSubtitleDisplay('');
   updateModeTabsUI();
   autoGrow();
   renderCurrentMode();
