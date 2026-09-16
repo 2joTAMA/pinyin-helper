@@ -1206,7 +1206,7 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
     const orderedKeys = Array.from(pureGroups.keys()).sort(compareGroupKeys);
     const outLines = orderedKeys.map((k) => pureGroups.get(k).join(''));
     commitInputValue(outLines.join('\n'));
-    renderKanjiMode();
+    renderCurrentMode();
   }
 
   groupBtn.addEventListener('click', performGrouping);
@@ -1235,7 +1235,7 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
     commitInputValue(newText);
     state.reordering = false;
     document.body.classList.remove('reordering');
-    renderKanjiMode();
+    renderCurrentMode();
   });
 
   // カードのドラッグ並び替え（マウス／タッチ共通、グループ内のみ）
@@ -1657,20 +1657,30 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
     modalContext = null;
   }
 
+  // 既存ファイルの内容を保存する（単漢字モードなら保存前に自動で再グループ化する）
+  function saveExistingFile() {
+    if (state.mode === 'kanji') performGrouping();
+    const idx = savedFiles.findIndex((f) => f.id === currentFileId);
+    if (idx < 0) return;
+    savedFiles[idx].text = input.value;
+    savedFiles[idx].mode = state.mode;
+    savedFiles[idx].title = computeAutoTitle(state.mode, input.value);
+    savedFiles[idx].updatedAt = Date.now();
+    persistSavedFiles();
+  }
+
+  // 一覧や新規作成へ移動する前に呼ぶ：一度でも保存済みのファイルに未保存の変更があれば自動保存する。
+  // まだ一度も保存していない新規ファイルは、確認なしで破棄してよい。
+  function autoSaveBeforeLeaving() {
+    if (currentFileId && isDirty()) saveExistingFile();
+  }
+
   saveBtn.addEventListener('click', () => {
     if (currentFileId) {
-      if (state.mode === 'kanji') performGrouping(); // 保存時は自動で再グループ化する
-      const idx = savedFiles.findIndex((f) => f.id === currentFileId);
-      if (idx >= 0) {
-        savedFiles[idx].text = input.value;
-        savedFiles[idx].mode = state.mode;
-        savedFiles[idx].title = computeAutoTitle(state.mode, input.value);
-        savedFiles[idx].updatedAt = Date.now();
-        persistSavedFiles();
-        flashSaved();
-        updateAutoTitleDisplay();
-        updateSaveBtnDirtyState();
-      }
+      saveExistingFile();
+      flashSaved();
+      updateAutoTitleDisplay();
+      updateSaveBtnDirtyState();
     } else {
       openSaveModal({ mode: 'new' });
     }
@@ -2325,28 +2335,24 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
     renderCurrentMode();
   }
 
-  listBtn.addEventListener('click', openListScreen);
+  listBtn.addEventListener('click', () => {
+    autoSaveBeforeLeaving();
+    openListScreen();
+  });
   listBackBtn.addEventListener('click', () => {
     if (listView.query.trim()) { setQuery(''); return; }
     if (listView.folderId !== null) { goToRoot(); return; }
     closeListScreen();
   });
-  // 保存済みでない内容がある状態で新規作成しようとしたら確認する
-  function confirmDiscardIfNeeded() {
-    if (!currentFileId && input.value.trim() !== '') {
-      return window.confirm('保存されていない内容が消えます。新規作成しますか？');
-    }
-    return true;
-  }
 
   listNewBtn.addEventListener('click', () => {
-    if (!confirmDiscardIfNeeded()) return;
+    autoSaveBeforeLeaving();
     closeListScreen();
     startNewFile();
   });
 
   newBtn.addEventListener('click', () => {
-    if (!confirmDiscardIfNeeded()) return;
+    autoSaveBeforeLeaving();
     startNewFile();
   });
 
