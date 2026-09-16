@@ -143,6 +143,18 @@
     flex:0 0 auto;
   }
   #contourToggle svg{ width:15px; height:15px; display:block; }
+  #jaKanjiToggle{
+    display:flex; align-items:center; justify-content:center;
+    padding:5px 9px;
+    margin-left:4px;
+    border:1px solid var(--line);
+    border-radius:999px;
+    background:none;
+    color:var(--paper-dim);
+    font-size:12px; font-weight:700;
+    flex:0 0 auto;
+  }
+  #jaKanjiToggle.active{ border-color:var(--seal); color:var(--seal); }
   #contourToggle.active{ border-color:var(--seal); color:var(--seal); }
 
   /* ---------- input ---------- */
@@ -368,6 +380,36 @@
   }
   .kcardPlaceholder{ width:34px; height:34px; border:2px dashed var(--seal-soft); border-radius:8px; opacity:0.5; }
 
+  /* ---------- 単漢字タップ時の単語シート ---------- */
+  #wordSheet{
+    position:fixed; left:0; right:0; bottom:0; z-index:70;
+    background:var(--ink-soft);
+    border-top:1px solid var(--line);
+    border-radius:14px 14px 0 0;
+    box-shadow:0 -8px 24px rgba(0,0,0,0.4);
+    max-height:45vh;
+    display:flex; flex-direction:column;
+    transform:translateY(100%);
+    transition:transform .22s ease;
+    padding-bottom:env(safe-area-inset-bottom);
+    pointer-events:none;
+  }
+  #wordSheet.open{ transform:translateY(0); pointer-events:auto; }
+  .wordSheetHandle{
+    width:36px; height:4px; border-radius:999px;
+    background:var(--line);
+    margin:8px auto 4px;
+    flex:0 0 auto;
+  }
+  #wordSheetList{
+    overflow-y:auto;
+    padding:4px 18px 16px;
+    display:flex; flex-direction:column; gap:12px;
+  }
+  .wordSheetItem{ display:flex; align-items:baseline; gap:12px; }
+  .wordSheetHz{ font-size:22px; font-weight:700; color:var(--paper); letter-spacing:1px; }
+  .wordSheetPy{ font-size:13px; color:var(--seal); }
+
   /* ---------- save modal ---------- */
   .modalOverlay{
     position:fixed; inset:0; z-index:100;
@@ -484,6 +526,71 @@
   }
   #listRows.isDragging{ -webkit-user-select:none; user-select:none; }
   #listRows.isDragging .listRow{ touch-action:none; }
+
+  /* ---------- 保存一覧フッター（単語帳を開く） ---------- */
+  #listFooter{
+    flex:0 0 auto;
+    padding:10px 16px calc(10px + env(safe-area-inset-bottom));
+    border-top:1px solid var(--line);
+    background:var(--ink-soft);
+  }
+  #openWordbookBtn{
+    width:100%;
+    display:flex; align-items:center; justify-content:center; gap:8px;
+    background:transparent;
+    border:1px solid var(--seal-soft);
+    color:var(--paper);
+    padding:11px;
+    border-radius:10px;
+    font-size:14px; font-weight:600;
+  }
+  #openWordbookBtn:active{ background:var(--seal-soft); }
+  #openWordbookBtn svg{ width:17px; height:17px; display:block; }
+
+  /* ---------- 単語帳画面 ---------- */
+  #wordbookScreen{
+    position:fixed; inset:0; z-index:90;
+    background:var(--ink);
+    display:flex; flex-direction:column;
+  }
+  #wordbookScreen header{
+    flex:0 0 auto;
+    display:flex; align-items:center; justify-content:space-between;
+    padding:8px 12px;
+    padding-top:calc(8px + env(safe-area-inset-top));
+    border-bottom:1px solid var(--line);
+    background:var(--ink-soft);
+  }
+  #wordbookHeaderActions{ display:flex; align-items:center; gap:2px; flex:0 0 auto; }
+  #wordSelectCount{ font-size:12px; color:var(--paper-dim); margin-right:2px; white-space:nowrap; }
+  #wordSelectToggleBtn.active{ color:var(--seal); }
+  #wordAddBar{
+    flex:0 0 auto;
+    padding:10px 16px 6px;
+  }
+  #wordAddInput{
+    width:100%; background:var(--input-bg); color:var(--input-text);
+    border:none; border-radius:10px; padding:11px 12px;
+    font-size:15px; font-family:inherit;
+  }
+  #wordAddInput:focus{ outline:2px solid var(--seal); }
+  #wordGrid{
+    flex:1 1 auto; overflow-y:auto;
+    display:grid; grid-template-columns:1fr 1fr; gap:8px;
+    padding:10px 16px 16px;
+    align-content:start;
+  }
+  .wordChip{
+    background:var(--ink-soft); border:1px solid var(--line); border-radius:10px;
+    padding:10px 8px;
+    display:flex; flex-direction:column; align-items:center; gap:3px;
+    text-align:center;
+    -webkit-user-select:none; user-select:none;
+  }
+  .wordChip.selected{ border-color:var(--seal); background:var(--seal-soft); }
+  .wordChipHz{ font-size:20px; font-weight:600; color:var(--paper); letter-spacing:1px; }
+  .wordChipPy{ font-size:11px; color:var(--paper-dim); }
+  .wordChip.selected .wordChipPy{ color:var(--paper); }
 
   /* ---------- saved list: search + folders ---------- */
   #listSearchBar{
@@ -617,6 +724,7 @@
     <button id="contourToggle" type="button" aria-pressed="false" title="声調を高低カーブの記号で表示（アルファベット非表示）">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 17 L9 7 L15 7 L20 17"></path></svg>
     </button>
+    <button id="jaKanjiToggle" type="button" aria-pressed="false" title="漢字を日本の字体で表示（内部のデータは変わりません）">日</button>
   </div>
 
   <div id="inputWrap">
@@ -661,6 +769,11 @@
     </div>
     <div id="kanjiGrid" hidden></div>
   </main>
+
+  <div id="wordSheet">
+    <div class="wordSheetHandle"></div>
+    <div id="wordSheetList"></div>
+  </div>
 
   <div id="saveModal" class="modalOverlay" hidden>
     <div class="modalCard">
@@ -707,6 +820,34 @@
       </button>
     </div>
     <div id="listRows"></div>
+    <div id="listFooter">
+      <button id="openWordbookBtn" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+        単語帳
+      </button>
+    </div>
+  </div>
+
+  <div id="wordbookScreen" hidden>
+    <header>
+      <button id="wordbookBackBtn" class="iconBtn" type="button" aria-label="戻る" title="戻る">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+      </button>
+      <span class="brand">単語帳</span>
+      <div id="wordbookHeaderActions">
+        <span id="wordSelectCount"></span>
+        <button id="wordDeleteBtn" class="iconBtn" type="button" aria-label="削除" title="削除" hidden disabled>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path></svg>
+        </button>
+        <button id="wordSelectToggleBtn" class="iconBtn" type="button" aria-label="選択" title="選択">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"></rect><polyline points="8 12 11 15 16 9"></polyline></svg>
+        </button>
+      </div>
+    </header>
+    <div id="wordAddBar">
+      <input id="wordAddInput" type="text" placeholder="単語を入力してEnterで登録（4文字まで）" maxlength="12" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="done" />
+    </div>
+    <div id="wordGrid"></div>
   </div>
 
   <div id="folderPicker" class="modalOverlay" hidden>
@@ -764,7 +905,11 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
   const tabBtns = document.querySelectorAll('.tabBtn');
   const toneToggle = document.getElementById('toneToggle');
   const contourToggle = document.getElementById('contourToggle');
+  const jaKanjiToggle = document.getElementById('jaKanjiToggle');
   const focusToggle = document.getElementById('focusToggle');
+
+  const wordSheet = document.getElementById('wordSheet');
+  const wordSheetList = document.getElementById('wordSheetList');
 
   const kanjiToolbar = document.getElementById('kanjiToolbar');
   const kanjiActions = document.getElementById('kanjiActions');
@@ -793,6 +938,15 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
   const importFileInput = document.getElementById('importFileInput');
   const listSearchInput = document.getElementById('listSearchInput');
   const listSearchClear = document.getElementById('listSearchClear');
+  const openWordbookBtn = document.getElementById('openWordbookBtn');
+
+  const wordbookScreen = document.getElementById('wordbookScreen');
+  const wordbookBackBtn = document.getElementById('wordbookBackBtn');
+  const wordSelectToggleBtn = document.getElementById('wordSelectToggleBtn');
+  const wordDeleteBtn = document.getElementById('wordDeleteBtn');
+  const wordSelectCount = document.getElementById('wordSelectCount');
+  const wordAddInput = document.getElementById('wordAddInput');
+  const wordGrid = document.getElementById('wordGrid');
 
   const folderPicker = document.getElementById('folderPicker');
   const folderPickerList = document.getElementById('folderPickerList');
@@ -821,6 +975,37 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
     return out;
   }
 
+  // 中国語簡体字→日本の字体（表示専用）。KANJI_MAPの逆引きで作る。
+  // 1つの簡体字に複数の日本字体が対応するケースは、KANJI_MAP内で先に見つかった方を採用する
+  // （同じ字の新字体／旧字体のペアでは大抵 新字体の方が先に見つかる）。
+  const JA_KANJI_MAP = (() => {
+    const rev = {};
+    for (const ja in KANJI_MAP) {
+      const cn = KANJI_MAP[ja];
+      if (cn === ja) continue;
+      if (!(cn in rev)) rev[cn] = ja;
+    }
+    return rev;
+  })();
+  // KANJI_MAPは「日本語入力を簡体字へ正規化する」ためのテーブルなので、
+  // 日本の新字体と簡体字がたまたま同じ形の字（国・学 など）は、そもそもキーに存在しない。
+  // そのため単純な逆引きだと、そうした字が別人（主に旧字体）に化けてしまう。
+  // 気づいたものはここに追加していく（変換せずそのまま表示する字のリスト）。
+  const JA_KANJI_NO_CONVERT = new Set([
+    '国', '学', '会', '体', '数', '万', '与', '争', '号', '医', '声', '麦',
+    '当', '灯', '点', '独', '昼',
+  ]);
+  function toJapaneseKanji(text) {
+    let out = '';
+    for (const ch of text) {
+      out += JA_KANJI_NO_CONVERT.has(ch) ? ch : (JA_KANJI_MAP[ch] || ch);
+    }
+    return out;
+  }
+  function displayChars(text) {
+    return state.jaKanjiOn ? toJapaneseKanji(text) : text;
+  }
+
   // ---------- app state ----------
   const state = {
     mode: 'sentence',      // 'sentence' | 'kanji'
@@ -828,6 +1013,8 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
     contourOn: false,      // true のときはアルファベットを隠し、声調を高低カーブのSVG記号で表示する
     reordering: false,
     focusMode: false,
+    groupedView: false,    // 単漢字モードでグループ分け済みかどうか（グループが1つだけでも true になりうる）
+    jaKanjiOn: false,      // true のときは漢字の表示だけ日本の字体に変換する（内部データ・ピンイン計算には影響しない）
   };
 
   let currentFileId = null;
@@ -948,7 +1135,7 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
 
       const charEl = document.createElement('span');
       charEl.className = 'cChar';
-      charEl.textContent = origin;
+      charEl.textContent = displayChars(origin);
       col.appendChild(charEl);
 
       const toneEl = document.createElement('span');
@@ -1053,7 +1240,7 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
 
       const zhDiv = document.createElement('div');
       zhDiv.className = 'zhLine';
-      zhDiv.textContent = normalized;
+      zhDiv.textContent = displayChars(normalized);
 
       const pyDiv = document.createElement('div');
       pyDiv.className = 'pyLine';
@@ -1098,7 +1285,7 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
 
     const hz = document.createElement('span');
     hz.className = 'khz' + (mismatch ? ' mismatch' : '');
-    hz.textContent = ch;
+    hz.textContent = displayChars(ch);
     card.appendChild(hz);
 
     if (state.contourOn) {
@@ -1112,10 +1299,48 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
       tone.textContent = state.toneType === 'num' ? getToneDigit(ch) : '';
       card.appendChild(tone);
     }
+
+    card.addEventListener('click', () => {
+      if (state.reordering) return;
+      openWordSheetFor(ch);
+    });
+
     return card;
   }
 
   const WARN_ICON_SVG = '<svg class="kgroupWarnIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>';
+
+  // ================= 単漢字タップ時の単語シート =================
+  // 登録済み単語にその漢字を含むものがあれば下からシートを出す。無ければ何もしない（現状維持）。
+  function openWordSheetFor(ch) {
+    const matches = savedWords.filter((w) => w.indexOf(ch) >= 0);
+    if (!matches.length) return;
+    wordSheetList.innerHTML = '';
+    matches.forEach((w) => {
+      const item = document.createElement('div');
+      item.className = 'wordSheetItem';
+      const hz = document.createElement('div');
+      hz.className = 'wordSheetHz';
+      hz.textContent = displayChars(w);
+      const py = document.createElement('div');
+      py.className = 'wordSheetPy';
+      py.textContent = lineToPinyin(w);
+      item.appendChild(hz);
+      item.appendChild(py);
+      wordSheetList.appendChild(item);
+    });
+    wordSheet.classList.add('open');
+  }
+  function closeWordSheet() {
+    wordSheet.classList.remove('open');
+  }
+  // カードでもシート自身でもない場所をタップしたら閉じる
+  document.addEventListener('click', (e) => {
+    if (!wordSheet.classList.contains('open')) return;
+    if (e.target.closest('#wordSheet')) return;
+    if (e.target.closest('.kcard')) return;
+    closeWordSheet();
+  });
 
   function renderKanjiMode() {
     const lines = parseKanjiLines(input.value);
@@ -1127,9 +1352,9 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
       return;
     }
 
-    // 2行以上（＝グループ分け済み）のときだけ、グループ見出し・不一致警告を出す。
-    // グループが1つもまだ無い状態では、何も判定しない。
-    const isGroupedView = lines.length > 1;
+    // state.groupedView が true（＝グループ分け実行済み）のときだけ、グループ見出し・不一致警告を出す。
+    // 同じピンインの漢字しかなくグループが1つだけになった場合でも、実行済みなら見出しを表示する。
+    const isGroupedView = state.groupedView;
     lines.forEach((chars) => {
       const wrap = document.createElement('div');
       wrap.className = 'kgroup';
@@ -1206,12 +1431,14 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
     const orderedKeys = Array.from(pureGroups.keys()).sort(compareGroupKeys);
     const outLines = orderedKeys.map((k) => pureGroups.get(k).join(''));
     commitInputValue(outLines.join('\n'));
+    state.groupedView = true;
     renderCurrentMode();
   }
 
   groupBtn.addEventListener('click', performGrouping);
 
   reorderBtn.addEventListener('click', () => {
+    closeWordSheet();
     state.reordering = true;
     document.body.classList.add('reordering');
     renderKanjiMode();
@@ -1337,6 +1564,13 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
     renderCurrentMode();
   });
 
+  jaKanjiToggle.addEventListener('click', () => {
+    state.jaKanjiOn = !state.jaKanjiOn;
+    jaKanjiToggle.classList.toggle('active', state.jaKanjiOn);
+    jaKanjiToggle.setAttribute('aria-pressed', state.jaKanjiOn ? 'true' : 'false');
+    renderCurrentMode();
+  });
+
   focusToggle.addEventListener('click', () => {
     state.focusMode = !state.focusMode;
     document.body.classList.toggle('focusMode', state.focusMode);
@@ -1347,6 +1581,7 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
 
   // ================= 描画の切替 =================
   function renderCurrentMode() {
+    closeWordSheet();
     const trimmed = input.value ? input.value.trim() : '';
     updateSurume(trimmed !== '');
     clearBtn.classList.toggle('show', input.value.length > 0);
@@ -1382,6 +1617,7 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
       }
     }, 800);
     autoGrow();
+    state.groupedView = false;
     renderCurrentMode();
   });
 
@@ -1442,6 +1678,36 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
   }
   let folders = loadFolders();
 
+  // ---------- 単語帳（単漢字モードのタップで関連語を出すための登録単語） ----------
+  const WORDS_KEY = 'pinyinHelperWords_v1';
+  function loadWords() {
+    try {
+      const raw = localStorage.getItem(WORDS_KEY);
+      const arr = raw ? JSON.parse(raw) : [];
+      return Array.isArray(arr) ? arr : [];
+    } catch (e) { return []; }
+  }
+  function persistWords() {
+    try { localStorage.setItem(WORDS_KEY, JSON.stringify(savedWords)); } catch (e) { /* noop */ }
+  }
+  let savedWords = loadWords(); // 新しく登録した単語が先頭
+
+  // 簡体字化して先頭4文字（漢字のみ）に丸め、既に登録済みなら何もしない（重複自動排除）
+  function addWord(raw) {
+    const simplified = normalizeToSimplified(raw || '');
+    const chars = Array.from(simplified).filter((ch) => HANZI_RE.test(ch)).slice(0, 4);
+    const word = chars.join('');
+    if (!word || savedWords.indexOf(word) >= 0) return false;
+    savedWords.unshift(word);
+    persistWords();
+    return true;
+  }
+  function deleteWords(words) {
+    const del = new Set(words);
+    savedWords = savedWords.filter((w) => !del.has(w));
+    persistWords();
+  }
+
   // ---------- バックアップの書き出し／読み込み ----------
   // ホーム画面アプリはブラウザ側の事情でデータ領域が消えることがあるため、
   // 手元にJSONファイルとして退避・復元できるようにする。
@@ -1452,6 +1718,7 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
       exportedAt: Date.now(),
       savedFiles: savedFiles,
       folders: folders,
+      words: savedWords,
     };
     const json = JSON.stringify(payload, null, 2);
     const blob = new Blob([json], { type: 'application/json' });
@@ -1469,10 +1736,11 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
     setTimeout(() => URL.revokeObjectURL(url), 2000);
   }
 
-  // 既存データは残したまま、IDが重複しないファイル・フォルダだけを追加する（上書きしない）
+  // 既存データは残したまま、IDが重複しないファイル・フォルダ・単語だけを追加する（上書きしない）
   function mergeImportedBackup(data) {
     const importedFolders = Array.isArray(data.folders) ? data.folders : [];
     const importedFiles = Array.isArray(data.savedFiles) ? data.savedFiles : [];
+    const importedWords = Array.isArray(data.words) ? data.words : [];
 
     const existingFolderIds = new Set(folders.map((f) => f.id));
     importedFolders.forEach((f) => {
@@ -1496,8 +1764,17 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
       }
     });
 
+    const existingWords = new Set(savedWords);
+    importedWords.forEach((w) => {
+      if (typeof w === 'string' && w && !existingWords.has(w)) {
+        savedWords.push(w);
+        existingWords.add(w);
+      }
+    });
+
     persistFolders();
     persistSavedFiles();
+    persistWords();
     return addedCount;
   }
 
@@ -1738,6 +2015,7 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
 
   // ================= 保存一覧 =================
   function openListScreen() {
+    closeWordSheet();
     updateListChrome();
     listSearchInput.value = listView.query;
     listSearchClear.hidden = !listView.query;
@@ -2319,6 +2597,8 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
     commitInputValue(file.text || '', { skipUndo: true });
     undoStack = [];
     undoBtn.disabled = true;
+    // 保存時は常にグループ分けされているはずなので、読み込み直後はグループ表示にする。
+    state.groupedView = parseKanjiLines(file.text || '').length > 0;
     renderCurrentMode();
     // 開いた直後は入力中の状態にせず、常に先頭が見える状態にする
     input.blur();
@@ -2332,6 +2612,7 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
     commitInputValue('', { skipUndo: true });
     undoStack = [];
     undoBtn.disabled = true;
+    state.groupedView = false;
     renderCurrentMode();
   }
 
@@ -2356,11 +2637,111 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
     startNewFile();
   });
 
+  // ================= 単語帳 =================
+  let wordSelectMode = false;
+  const selectedWords = new Set();
+
+  function updateWordSelectUI() {
+    wordSelectToggleBtn.classList.toggle('active', wordSelectMode);
+    wordSelectToggleBtn.setAttribute('aria-pressed', wordSelectMode ? 'true' : 'false');
+    wordDeleteBtn.hidden = !wordSelectMode;
+    wordDeleteBtn.disabled = selectedWords.size === 0;
+    wordSelectCount.textContent = wordSelectMode && selectedWords.size ? selectedWords.size + '件選択中' : '';
+  }
+
+  function exitWordSelectMode() {
+    wordSelectMode = false;
+    selectedWords.clear();
+    updateWordSelectUI();
+  }
+
+  function renderWordGrid() {
+    wordGrid.innerHTML = '';
+    if (!savedWords.length) {
+      wordGrid.innerHTML = '<div class="listEmpty">まだ単語が登録されていません</div>';
+      return;
+    }
+    savedWords.forEach((word) => {
+      const chip = document.createElement('div');
+      chip.className = 'wordChip' + (selectedWords.has(word) ? ' selected' : '');
+
+      const hz = document.createElement('div');
+      hz.className = 'wordChipHz';
+      hz.textContent = displayChars(word);
+      chip.appendChild(hz);
+
+      const py = document.createElement('div');
+      py.className = 'wordChipPy';
+      py.textContent = lineToPinyin(word);
+      chip.appendChild(py);
+
+      chip.addEventListener('click', () => {
+        if (!wordSelectMode) return;
+        if (selectedWords.has(word)) selectedWords.delete(word);
+        else selectedWords.add(word);
+        chip.classList.toggle('selected');
+        updateWordSelectUI();
+      });
+
+      wordGrid.appendChild(chip);
+    });
+  }
+
+  function openWordbookScreen() {
+    closeWordSheet();
+    exitWordSelectMode();
+    wordAddInput.value = '';
+    renderWordGrid();
+    wordbookScreen.hidden = false;
+    setTimeout(() => wordAddInput.focus(), 0);
+  }
+  function closeWordbookScreen() {
+    wordbookScreen.hidden = true;
+  }
+
+  openWordbookBtn.addEventListener('click', openWordbookScreen);
+
+  wordbookBackBtn.addEventListener('click', () => {
+    if (wordSelectMode) { exitWordSelectMode(); return; }
+    closeWordbookScreen();
+  });
+
+  wordSelectToggleBtn.addEventListener('click', () => {
+    wordSelectMode = !wordSelectMode;
+    selectedWords.clear();
+    updateWordSelectUI();
+    renderWordGrid();
+  });
+
+  wordDeleteBtn.addEventListener('click', () => {
+    if (!selectedWords.size) return;
+    deleteWords(selectedWords);
+    exitWordSelectMode();
+    renderWordGrid();
+  });
+
+  // Enterを押すたびに1件ずつ登録する（IME変換確定のEnterと誤爆しないようcompositionを見る）
+  let wordAddComposing = false;
+  wordAddInput.addEventListener('compositionstart', () => { wordAddComposing = true; });
+  wordAddInput.addEventListener('compositionend', () => { wordAddComposing = false; });
+  wordAddInput.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' || wordAddComposing || e.isComposing) return;
+    e.preventDefault();
+    addWord(wordAddInput.value);
+    wordAddInput.value = '';
+    renderWordGrid();
+  });
+
   document.addEventListener('keydown', (e) => {
     if (e.key !== 'Escape') return;
     if (!nameModal.hidden) { finishName(null); return; }
     if (!folderPicker.hidden) { closeFolderPicker(); return; }
     if (!saveModal.hidden) { closeSaveModal(); return; }
+    if (!wordbookScreen.hidden) {
+      if (wordSelectMode) exitWordSelectMode();
+      else closeWordbookScreen();
+      return;
+    }
     if (!listScreen.hidden) {
       if (listView.query.trim()) setQuery('');
       else if (listView.folderId !== null) goToRoot();
