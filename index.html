@@ -86,6 +86,7 @@
   #saveBtn:active{ background:var(--seal-soft); color:var(--paper); }
   #saveBtn svg{ width:12px; height:12px; display:block; }
   #saveBtn.justSaved{ background:var(--seal); border-color:var(--seal); color:var(--ink); }
+  #saveBtn.dirty{ background:var(--warn); border-color:var(--warn); color:var(--ink); }
 
   /* ---------- auto-title sub header ---------- */
   #subHeader{
@@ -142,19 +143,6 @@
   }
   #contourToggle svg{ width:15px; height:15px; display:block; }
   #contourToggle.active{ border-color:var(--seal); color:var(--seal); }
-  #focusToggle{
-    display:flex; align-items:center; justify-content:center;
-    padding:5px 13px;
-    margin-left:6px;
-    border:1px solid var(--line);
-    border-radius:999px;
-    background:none;
-    color:var(--paper-dim);
-    flex:0 0 auto;
-  }
-  #focusToggle svg{ width:14px; height:14px; display:block; transition:transform .2s ease; }
-  #focusToggle.active{ border-color:var(--seal); color:var(--seal); }
-  #focusToggle.active svg{ transform:rotate(180deg); }
 
   /* ---------- input ---------- */
   #inputWrap{
@@ -163,16 +151,12 @@
     border-bottom:1px solid var(--line);
     background:var(--ink-soft);
     position:relative;
-    max-height:280px;
-    overflow:hidden;
-    transition:max-height .25s ease, opacity .2s ease, padding .25s ease;
+    overflow:visible;
+    transition:padding .25s ease;
   }
   body.focusMode #inputWrap{
-    max-height:0;
     padding-top:0; padding-bottom:0;
-    opacity:0;
     border-bottom-color:transparent;
-    pointer-events:none;
   }
   #zhInput{
     width:100%;
@@ -188,9 +172,37 @@
     line-height:1.4;
     font-family:"Hiragino Sans","PingFang SC","Microsoft YaHei","Noto Sans CJK SC",sans-serif;
     display:block;
+    overflow-y:auto;
+    transition:max-height .25s ease, min-height .25s ease, opacity .2s ease, padding .25s ease;
   }
   #zhInput:focus{ outline:2px solid var(--seal); outline-offset:1px; }
-  .inputTools{ position:absolute; top:16px; right:16px; display:flex; gap:6px; }
+  body.focusMode #zhInput{
+    max-height:0; min-height:0;
+    padding-top:0; padding-bottom:0;
+    opacity:0;
+    overflow:hidden;
+    pointer-events:none;
+  }
+  .inputTools{
+    position:absolute; top:16px; right:16px; display:flex; gap:6px;
+    transition:opacity .2s ease;
+  }
+  body.focusMode .inputTools{ opacity:0; pointer-events:none; }
+  /* 入力欄の右下からはみ出す形で貼り付いたトグル。畳んでいる間も常にクリックできる */
+  #focusToggle{
+    position:absolute; right:14px; bottom:-15px; z-index:3;
+    display:flex; align-items:center; justify-content:center;
+    width:30px; height:30px;
+    padding:0;
+    border:1px solid var(--line);
+    border-radius:999px;
+    background:var(--ink-soft);
+    color:var(--paper-dim);
+    box-shadow:0 2px 5px rgba(0,0,0,0.3);
+  }
+  #focusToggle svg{ width:14px; height:14px; display:block; transition:transform .2s ease; }
+  #focusToggle.active{ border-color:var(--seal); color:var(--seal); }
+  #focusToggle.active svg{ transform:rotate(180deg); }
   .miniBtn{
     width:22px; height:22px; border-radius:999px;
     background:rgba(42,38,32,0.18);
@@ -577,9 +589,6 @@
     <button id="contourToggle" type="button" aria-pressed="false" title="声調を高低カーブの記号で表示（アルファベット非表示）">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 17 L9 7 L15 7 L20 17"></path></svg>
     </button>
-    <button id="focusToggle" type="button" aria-pressed="false" title="入力欄を畳んで広く表示">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 11 12 6 7 11"></polyline><polyline points="17 18 12 13 7 18"></polyline></svg>
-    </button>
   </div>
 
   <div id="inputWrap">
@@ -592,6 +601,9 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="5" y1="5" x2="19" y2="19"></line><line x1="19" y1="5" x2="5" y2="19"></line></svg>
       </button>
     </div>
+    <button id="focusToggle" type="button" aria-pressed="false" title="入力欄を畳んで広く表示">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 11 12 6 7 11"></polyline><polyline points="17 18 12 13 7 18"></polyline></svg>
+    </button>
   </div>
 
   <div id="kanjiToolbar" hidden>
@@ -1305,6 +1317,7 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
     updateSurume(trimmed !== '');
     clearBtn.classList.toggle('show', input.value.length > 0);
     updateAutoTitleDisplay();
+    updateSaveBtnDirtyState();
 
     if (state.mode === 'sentence') {
       results.hidden = false;
@@ -1541,13 +1554,19 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
     return flat.length > 14 ? flat.slice(0, 14) + '…' : flat;
   }
 
-  // 単漢字モードの自動タイトル：各文字のピンイン（アルファベットのみ）を半角スペースで連結
+  // 単漢字モードの自動タイトル：グループ（行）ごとの代表ピンインを、同じ音は重複させずに半角スペースで連結
   function kanjiAutoTitle(text) {
     const lines = parseKanjiLines(text);
-    const chars = [];
-    lines.forEach((line) => chars.push.apply(chars, line));
-    if (!chars.length) return '無題';
-    return chars.map((ch) => getBasePinyin(ch) || ch).join(' ');
+    const seen = new Set();
+    const labels = [];
+    lines.forEach((chars) => {
+      if (!chars.length) return;
+      const label = getBasePinyin(chars[0]) || chars[0];
+      if (seen.has(label)) return;
+      seen.add(label);
+      labels.push(label);
+    });
+    return labels.length ? labels.join(' ') : '無題';
   }
 
   // モードに応じた自動タイトルを算出する
@@ -1563,6 +1582,19 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
   function flashSaved() {
     saveBtn.classList.add('justSaved');
     setTimeout(() => saveBtn.classList.remove('justSaved'), 700);
+  }
+
+  // 現在の内容が、最後に保存した状態から変わっているか（未保存の変更があるか）
+  function isDirty() {
+    if (currentFileId) {
+      const f = savedFiles.find((x) => x.id === currentFileId);
+      if (!f) return false;
+      return f.text !== input.value || f.mode !== state.mode;
+    }
+    return input.value.trim() !== '';
+  }
+  function updateSaveBtnDirtyState() {
+    saveBtn.classList.toggle('dirty', isDirty());
   }
 
   let modalContext = null; // { mode: 'new' | 'rename' }
@@ -1582,6 +1614,7 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
 
   saveBtn.addEventListener('click', () => {
     if (currentFileId) {
+      if (state.mode === 'kanji') performGrouping(); // 保存時は自動で再グループ化する
       const idx = savedFiles.findIndex((f) => f.id === currentFileId);
       if (idx >= 0) {
         savedFiles[idx].text = input.value;
@@ -1590,6 +1623,8 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
         savedFiles[idx].updatedAt = Date.now();
         persistSavedFiles();
         flashSaved();
+        updateAutoTitleDisplay();
+        updateSaveBtnDirtyState();
       }
     } else {
       openSaveModal({ mode: 'new' });
@@ -1619,6 +1654,7 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
       }
       setSubtitleDisplay(subtitle);
     } else {
+      if (state.mode === 'kanji') performGrouping(); // 保存時は自動で再グループ化する
       const file = {
         id: 'f' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8),
         title: computeAutoTitle(state.mode, input.value),
@@ -1632,6 +1668,8 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
       persistSavedFiles();
       currentFileId = file.id;
       setSubtitleDisplay(subtitle);
+      updateAutoTitleDisplay();
+      updateSaveBtnDirtyState();
     }
     closeSaveModal();
   });
