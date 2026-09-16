@@ -362,7 +362,10 @@
     position:relative;
     display:flex; align-items:center; justify-content:center;
     padding:3px 4px;
+    border-radius:8px;
+    transition:background-color .15s ease;
   }
+  .kcard.wordActive{ background:var(--seal-soft); }
   .khz{ font-size:27px; line-height:1; color:var(--paper); }
   .khz.mismatch{ color:var(--warn); }
 
@@ -400,6 +403,18 @@
     pointer-events:none;
   }
   #wordSheet.open{ transform:translateY(0); pointer-events:auto; }
+  /* タップした漢字が画面下半分にあるときは、隠れないよう上から出す */
+  #wordSheet.fromTop{
+    top:0; bottom:auto;
+    border-radius:0 0 14px 14px;
+    box-shadow:0 8px 24px rgba(0,0,0,0.4);
+    padding-bottom:0;
+    padding-top:env(safe-area-inset-top);
+    transform:translateY(-100%);
+  }
+  #wordSheet.fromTop.open{ transform:translateY(0); }
+  #wordSheet.fromTop .wordSheetHandle{ order:2; }
+  #wordSheet.fromTop #wordSheetList{ order:1; }
   .wordSheetHandle{
     width:36px; height:4px; border-radius:999px;
     background:var(--line);
@@ -457,17 +472,17 @@
   .modalBtnPrimary{ background:var(--seal); color:var(--ink); border:none; border-radius:8px; font-size:14px; font-weight:700; padding:10px 18px; }
 
   /* ---------- saved list：左からスワイプインするメニュー（本来の画面は入力モード側） ----------
-     ハンバーガー(#listBtn)をメニューが開いている間も押せるように、
-     ヘッダーの高さ分だけ上を空けてドロワーを配置する。 */
+     メニューを開いている間は一番上まで覆う。閉じる操作はメニュー自身のヘッダーの
+     ハンバーガーアイコン（#listBackBtn）／背景タップ／本体ハンバーガー再タップで行う。 */
   #listBackdrop{
-    position:fixed; top:calc(53px + env(safe-area-inset-top)); right:0; bottom:0; left:0; z-index:89;
+    position:fixed; inset:0; z-index:89;
     background:rgba(0,0,0,0.45);
     opacity:0; pointer-events:none;
     transition:opacity .25s ease;
   }
   #listBackdrop.open{ opacity:1; pointer-events:auto; }
   #listScreen{
-    position:fixed; top:calc(53px + env(safe-area-inset-top)); bottom:0; left:0;
+    position:fixed; top:0; bottom:0; left:0;
     width:90%;
     z-index:90;
     background:var(--ink);
@@ -548,24 +563,18 @@
   #listRows.isDragging{ -webkit-user-select:none; user-select:none; }
   #listRows.isDragging .listRow{ touch-action:none; }
 
-  /* ---------- 保存一覧フッター（単語帳を開く） ---------- */
-  #listFooter{
-    flex:0 0 auto;
-    padding:10px 16px calc(10px + env(safe-area-inset-bottom));
-    border-top:1px solid var(--line);
-    background:var(--ink-soft);
-  }
+  /* ---------- 保存一覧フッター（単語帳を開く）：下端いっぱいをオレンジで塗ったボタン ---------- */
   #openWordbookBtn{
+    flex:0 0 auto;
     width:100%;
     display:flex; align-items:center; justify-content:center; gap:8px;
-    background:transparent;
-    border:1px solid var(--seal-soft);
-    color:var(--paper);
-    padding:11px;
-    border-radius:10px;
-    font-size:14px; font-weight:600;
+    background:var(--seal);
+    border:none;
+    color:var(--ink);
+    padding:14px 16px calc(14px + env(safe-area-inset-bottom));
+    font-size:14px; font-weight:700;
   }
-  #openWordbookBtn:active{ background:var(--seal-soft); }
+  #openWordbookBtn:active{ background:var(--seal-soft); color:var(--paper); }
   #openWordbookBtn svg{ width:17px; height:17px; display:block; }
 
   /* ---------- 単語帳画面 ---------- */
@@ -825,8 +834,8 @@
   <div id="listBackdrop"></div>
   <div id="listScreen">
     <header>
-      <button id="listBackBtn" class="iconBtn" type="button" aria-label="戻る" title="戻る">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+      <button id="listBackBtn" class="iconBtn" type="button" aria-label="メニューを閉じる" title="メニューを閉じる">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="6" x2="20" y2="6"></line><line x1="4" y1="12" x2="20" y2="12"></line><line x1="4" y1="18" x2="14" y2="18"></line></svg>
       </button>
       <span class="brand" id="listBrand">保存一覧</span>
       <div id="listHeaderActions">
@@ -850,12 +859,10 @@
       </button>
     </div>
     <div id="listRows"></div>
-    <div id="listFooter">
-      <button id="openWordbookBtn" type="button">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
-        単語帳
-      </button>
-    </div>
+    <button id="openWordbookBtn" type="button">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+      単語帳
+    </button>
   </div>
 
   <div id="wordbookScreen" hidden>
@@ -1358,7 +1365,7 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
 
     card.addEventListener('click', () => {
       if (state.reordering) return;
-      openWordSheetFor(ch);
+      openWordSheetFor(ch, card);
     });
 
     return card;
@@ -1368,7 +1375,13 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
 
   // ================= 単漢字タップ時の単語シート =================
   // 登録済み単語にその漢字を含むものがあれば下からシートを出す。無ければ何もしない（現状維持）。
-  function openWordSheetFor(ch) {
+  let activeWordCard = null;
+  function setActiveWordCard(card) {
+    if (activeWordCard && activeWordCard !== card) activeWordCard.classList.remove('wordActive');
+    activeWordCard = card || null;
+    if (activeWordCard) activeWordCard.classList.add('wordActive');
+  }
+  function openWordSheetFor(ch, cardEl) {
     const matches = savedWords.filter((w) => w.indexOf(ch) >= 0);
     if (!matches.length) return;
     wordSheetList.innerHTML = '';
@@ -1385,10 +1398,17 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
       item.appendChild(py);
       wordSheetList.appendChild(item);
     });
+    // タップした漢字が画面下半分にある場合は、シートに隠れないよう上から出す
+    if (cardEl) {
+      const rect = cardEl.getBoundingClientRect();
+      wordSheet.classList.toggle('fromTop', rect.top > window.innerHeight / 2);
+    }
     wordSheet.classList.add('open');
+    setActiveWordCard(cardEl);
   }
   function closeWordSheet() {
     wordSheet.classList.remove('open');
+    setActiveWordCard(null);
   }
   // カードでもシート自身でもない場所をタップしたら閉じる
   document.addEventListener('click', (e) => {
