@@ -15,6 +15,7 @@
     --paper:#d9d0bd;
     --paper-dim:#93897a;
     --input-bg:#c7bda7;
+    --input-bg-dim:#b6ac93;
     --input-text:#2a2620;
     --seal:#c9704f;
     --seal-soft:#7a4433;
@@ -166,7 +167,7 @@
     background:var(--input-bg);
     color:var(--input-text);
     border:none;
-    border-radius:8px;
+    border-radius:8px 8px 0 8px;
     padding:9px 60px 9px 11px;
     font-size:17px;
     line-height:1.4;
@@ -188,15 +189,16 @@
     transition:opacity .2s ease;
   }
   body.focusMode .inputTools{ opacity:0; pointer-events:none; }
-  /* 入力欄の下端にぴったり貼り付いた取っ手（フィールドの文字部分とは重ならない）。畳んでいる間も常にクリックできる */
+  /* 入力欄の下端にぴったり貼り付いた取っ手。右端は入力欄の右端に揃え、角丸側（入力欄の右下）は0にして噛み合わせる */
   #focusToggle{
-    position:absolute; right:14px; bottom:-12px; z-index:3;
+    position:absolute; right:10px; bottom:-12px; z-index:3;
     display:flex; align-items:center; justify-content:center;
     width:44px; height:20px;
     padding:0;
     border:none;
+    border-top:1px solid var(--line);
     border-radius:0 0 10px 10px;
-    background:var(--input-bg);
+    background:var(--input-bg-dim);
     color:var(--input-text);
     box-shadow:0 3px 5px rgba(0,0,0,0.35);
   }
@@ -2303,6 +2305,10 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
     undoStack = [];
     undoBtn.disabled = true;
     renderCurrentMode();
+    // 開いた直後は入力中の状態にせず、常に先頭が見える状態にする
+    input.blur();
+    results.scrollTop = 0;
+    kanjiGrid.scrollTop = 0;
   }
 
   function startNewFile() {
