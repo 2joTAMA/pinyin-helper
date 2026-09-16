@@ -518,11 +518,14 @@
   .listRow{
     position:relative; background:var(--ink);
     display:flex; align-items:center; justify-content:space-between; gap:10px;
-    padding:12px 2px;
+    padding:12px 2px 12px 10px;
+    border-left:3px solid transparent;
     touch-action:pan-y;
     -webkit-touch-callout:none;
     -webkit-user-select:none; user-select:none;
   }
+  .listRow.current{ background:var(--seal-soft); border-left-color:var(--seal); }
+  .listRow.current .listTitle{ color:var(--seal); }
   .listTitle{
     flex:1 1 auto; min-width:0; font-size:14px; font-weight:600; color:var(--paper);
     white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
@@ -571,7 +574,7 @@
     background:var(--seal);
     border:none;
     color:var(--ink);
-    padding:14px 16px calc(14px + env(safe-area-inset-bottom));
+    padding:14px 16px;
     font-size:14px; font-weight:700;
   }
   #openWordbookBtn:active{ background:var(--seal-soft); color:var(--paper); }
@@ -1033,11 +1036,15 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
     '国', '学', '会', '体', '数', '万', '与', '争', '号', '医', '声', '麦',
     '当', '灯', '点', '独', '昼',
     '教', '姜', '径', '侠', '峡', '将', '条', '状', '床', '即',
+    '呆', '台', '峰', '布', '板', '表', '面',
+    '壮', '装',
   ]);
   // 簡体字1字に新字体・旧字体など複数の候補があり、逆引きがたまたま違う方（主に旧字体）を
   // 選んでしまっているケース。気づいたものはここで正しい新字体を指定して上書きする。
   const JA_KANJI_PREFERRED = {
     '经': '経', '轻': '軽', '艺': '芸', '继': '継', '术': '術', '续': '続',
+    '带': '帯', '对': '対', '发': '発', '满': '満', '丰': '豊', '变': '変',
+    '边': '辺', '击': '撃', '专': '専', '传': '伝',
   };
   function toJapaneseKanji(text) {
     let out = '';
@@ -2239,7 +2246,7 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
     actions.appendChild(del);
 
     const row = document.createElement('div');
-    row.className = 'listRow';
+    row.className = 'listRow' + (file.id === currentFileId ? ' current' : '');
     row.dataset.fileId = file.id;
 
     const titleWrap = document.createElement('span');
