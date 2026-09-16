@@ -21,6 +21,7 @@
     --seal-soft:#7a4433;
     --line:#4a463e;
     --warn:#e2574c;
+    --ja-accent:#7fb3d5;
   }
   *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
   [hidden]{ display:none !important; }
@@ -364,6 +365,10 @@
   }
   .khz{ font-size:27px; line-height:1; color:var(--paper); }
   .khz.mismatch{ color:var(--warn); }
+
+  /* ---------- 日本漢字表示モードで、元の簡体字と実際に字形が変わった文字だけ色を付ける ---------- */
+  .jaChanged{ color:var(--ja-accent); }
+  .khz.mismatch .jaChanged{ color:var(--warn); }
   .ktone{
     position:absolute; top:-1px; right:-1px;
     font-size:9px; font-weight:700; line-height:1;
@@ -451,12 +456,28 @@
   .modalBtnGhost{ background:transparent; border:none; color:var(--paper-dim); font-size:14px; padding:10px 12px; }
   .modalBtnPrimary{ background:var(--seal); color:var(--ink); border:none; border-radius:8px; font-size:14px; font-weight:700; padding:10px 18px; }
 
-  /* ---------- saved list screen ---------- */
+  /* ---------- saved list：左からスワイプインするメニュー（本来の画面は入力モード側） ----------
+     ハンバーガー(#listBtn)をメニューが開いている間も押せるように、
+     ヘッダーの高さ分だけ上を空けてドロワーを配置する。 */
+  #listBackdrop{
+    position:fixed; top:calc(53px + env(safe-area-inset-top)); right:0; bottom:0; left:0; z-index:89;
+    background:rgba(0,0,0,0.45);
+    opacity:0; pointer-events:none;
+    transition:opacity .25s ease;
+  }
+  #listBackdrop.open{ opacity:1; pointer-events:auto; }
   #listScreen{
-    position:fixed; inset:0; z-index:90;
+    position:fixed; top:calc(53px + env(safe-area-inset-top)); bottom:0; left:0;
+    width:90%;
+    z-index:90;
     background:var(--ink);
     display:flex; flex-direction:column;
+    transform:translateX(-100%);
+    transition:transform .25s ease;
+    box-shadow:10px 0 28px rgba(0,0,0,0.4);
+    pointer-events:none;
   }
+  #listScreen.open{ transform:translateX(0); pointer-events:auto; }
   #listScreen header{
     flex:0 0 auto;
     display:flex; align-items:center; justify-content:space-between;
@@ -633,7 +654,15 @@
   .folderRow .listTitle svg{ width:17px; height:17px; color:var(--seal); flex:0 0 auto; }
   .folderRow .listTitle span{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .folderCount{ font-size:11px; color:var(--paper-dim); min-width:14px; text-align:right; }
-  .folderChevron svg{ width:15px; height:15px; color:var(--paper-dim); display:block; }
+  .folderChevron svg{ width:15px; height:15px; color:var(--paper-dim); display:block; transition:transform .18s ease; }
+  .listRowWrap.expanded .folderChevron svg{ transform:rotate(90deg); }
+
+  /* ---------- フォルダの中身（アコーディオン展開） ---------- */
+  .folderBody{
+    padding-left:16px;
+    border-left:1px solid var(--line);
+    margin:0 0 4px 8px;
+  }
 
   .listFolderChip{
     display:flex; align-items:center; gap:3px;
@@ -793,7 +822,8 @@
     </div>
   </div>
 
-  <div id="listScreen" hidden>
+  <div id="listBackdrop"></div>
+  <div id="listScreen">
     <header>
       <button id="listBackBtn" class="iconBtn" type="button" aria-label="戻る" title="戻る">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
@@ -928,6 +958,7 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
   const modalSaveBtn = document.getElementById('modalSaveBtn');
 
   const listScreen = document.getElementById('listScreen');
+  const listBackdrop = document.getElementById('listBackdrop');
   const listBackBtn = document.getElementById('listBackBtn');
   const listNewBtn = document.getElementById('listNewBtn');
   const newBtn = document.getElementById('newBtn');
@@ -994,16 +1025,41 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
   const JA_KANJI_NO_CONVERT = new Set([
     '国', '学', '会', '体', '数', '万', '与', '争', '号', '医', '声', '麦',
     '当', '灯', '点', '独', '昼',
+    '教', '姜', '径', '侠', '峡', '将', '条', '状', '床', '即',
   ]);
+  // 簡体字1字に新字体・旧字体など複数の候補があり、逆引きがたまたま違う方（主に旧字体）を
+  // 選んでしまっているケース。気づいたものはここで正しい新字体を指定して上書きする。
+  const JA_KANJI_PREFERRED = {
+    '经': '経', '轻': '軽', '艺': '芸', '继': '継', '术': '術', '续': '続',
+  };
   function toJapaneseKanji(text) {
     let out = '';
     for (const ch of text) {
-      out += JA_KANJI_NO_CONVERT.has(ch) ? ch : (JA_KANJI_MAP[ch] || ch);
+      if (JA_KANJI_PREFERRED[ch]) out += JA_KANJI_PREFERRED[ch];
+      else if (JA_KANJI_NO_CONVERT.has(ch)) out += ch;
+      else out += JA_KANJI_MAP[ch] || ch;
     }
     return out;
   }
-  function displayChars(text) {
-    return state.jaKanjiOn ? toJapaneseKanji(text) : text;
+  // elの中身をtextで置き換える。日本漢字表示ONのときは、実際に字形が変わった文字だけ
+  // <span class="jaChanged">で包んで色を付ける（変わらない文字は普通のテキストのまま）。
+  function renderDisplayText(el, text) {
+    el.textContent = '';
+    if (!state.jaKanjiOn) {
+      el.textContent = text;
+      return;
+    }
+    for (const ch of text) {
+      const converted = toJapaneseKanji(ch);
+      if (converted !== ch) {
+        const span = document.createElement('span');
+        span.className = 'jaChanged';
+        span.textContent = converted;
+        el.appendChild(span);
+      } else {
+        el.appendChild(document.createTextNode(ch));
+      }
+    }
   }
 
   // ---------- app state ----------
@@ -1135,7 +1191,7 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
 
       const charEl = document.createElement('span');
       charEl.className = 'cChar';
-      charEl.textContent = displayChars(origin);
+      renderDisplayText(charEl, origin);
       col.appendChild(charEl);
 
       const toneEl = document.createElement('span');
@@ -1240,7 +1296,7 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
 
       const zhDiv = document.createElement('div');
       zhDiv.className = 'zhLine';
-      zhDiv.textContent = displayChars(normalized);
+      renderDisplayText(zhDiv, normalized);
 
       const pyDiv = document.createElement('div');
       pyDiv.className = 'pyLine';
@@ -1285,7 +1341,7 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
 
     const hz = document.createElement('span');
     hz.className = 'khz' + (mismatch ? ' mismatch' : '');
-    hz.textContent = displayChars(ch);
+    renderDisplayText(hz, ch);
     card.appendChild(hz);
 
     if (state.contourOn) {
@@ -1321,7 +1377,7 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
       item.className = 'wordSheetItem';
       const hz = document.createElement('div');
       hz.className = 'wordSheetHz';
-      hz.textContent = displayChars(w);
+      renderDisplayText(hz, w);
       const py = document.createElement('div');
       py.className = 'wordSheetPy';
       py.textContent = lineToPinyin(w);
@@ -1808,8 +1864,9 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
     reader.readAsText(file);
   });
 
-  // 保存一覧の表示状態： folderId=null はルート、query は検索文字列
-  const listView = { folderId: null, query: '' };
+  // 保存一覧の表示状態：query は検索文字列。フォルダはアコーディオンなので展開中のIDをSetで持つ
+  const listView = { query: '' };
+  const expandedFolders = new Set();
 
   function folderName(id) {
     const f = folders.find((x) => x.id === id);
@@ -1991,7 +2048,7 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
         persistSavedFiles();
       }
       if (modalContext.fileId === currentFileId) setSubtitleDisplay(subtitle);
-      if (!listScreen.hidden) renderListRows();
+      if (listScreen.classList.contains('open')) renderListRows();
     } else {
       if (state.mode === 'kanji') performGrouping(); // 保存時は自動で再グループ化する
       const file = {
@@ -2000,7 +2057,7 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
         subtitle: subtitle,
         mode: state.mode,
         text: input.value,
-        folderId: listView.folderId || null,
+        folderId: null, // アコーディオン化により「今開いているフォルダ」という概念がないため常にルートへ保存
         updatedAt: Date.now(),
       };
       savedFiles.unshift(file); // 新規保存は一覧の先頭へ。以降は手動の並び順を保持
@@ -2013,34 +2070,30 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
     closeSaveModal();
   });
 
-  // ================= 保存一覧 =================
+  // ================= 保存一覧（左からスワイプインするメニュー） =================
   function openListScreen() {
     closeWordSheet();
     updateListChrome();
     listSearchInput.value = listView.query;
     listSearchClear.hidden = !listView.query;
     renderListRows();
-    listScreen.hidden = false;
+    listScreen.classList.add('open');
+    listBackdrop.classList.add('open');
   }
   function closeListScreen() {
-    listScreen.hidden = true;
+    listScreen.classList.remove('open');
+    listBackdrop.classList.remove('open');
+  }
+  function isListScreenOpen() {
+    return listScreen.classList.contains('open');
   }
 
   function updateListChrome() {
-    if (listView.query.trim()) { listBrand.textContent = '検索結果'; return; }
-    listBrand.textContent = listView.folderId !== null ? folderName(listView.folderId) : '保存一覧';
-  }
-
-  function goToRoot() {
-    listView.folderId = null;
-    updateListChrome();
-    renderListRows();
-    listRows.scrollTop = 0;
+    listBrand.textContent = listView.query.trim() ? '検索結果' : '保存一覧';
   }
 
   function setQuery(q) {
     listView.query = q;
-    if (q.trim()) listView.folderId = null;
     if (listSearchInput.value !== q) listSearchInput.value = q;
     listSearchClear.hidden = !q;
     updateListChrome();
@@ -2072,44 +2125,44 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
       return;
     }
 
-    // ルート：フォルダ一覧 → ルート直下のファイル
-    if (listView.folderId === null) {
-      const newFolderBtn = document.createElement('button');
-      newFolderBtn.type = 'button';
-      newFolderBtn.className = 'newFolderRow';
-      newFolderBtn.innerHTML = FOLDER_PLUS_SVG + '<span>新規フォルダ</span>';
-      newFolderBtn.addEventListener('click', createFolderFlow);
-      listRows.appendChild(newFolderBtn);
+    // フォルダ一覧（アコーディオン開閉）→ ルート直下のファイル
+    const newFolderBtn = document.createElement('button');
+    newFolderBtn.type = 'button';
+    newFolderBtn.className = 'newFolderRow';
+    newFolderBtn.innerHTML = FOLDER_PLUS_SVG + '<span>新規フォルダ</span>';
+    newFolderBtn.addEventListener('click', createFolderFlow);
+    listRows.appendChild(newFolderBtn);
 
-      folders
-        .slice()
-        .sort((a, b) => a.name.localeCompare(b.name, 'ja'))
-        .forEach((folder) => listRows.appendChild(makeFolderRow(folder)));
+    folders
+      .slice()
+      .sort((a, b) => a.name.localeCompare(b.name, 'ja'))
+      .forEach((folder) => {
+        listRows.appendChild(makeFolderRow(folder));
+        if (!expandedFolders.has(folder.id)) return;
+        const body = document.createElement('div');
+        body.className = 'folderBody';
+        const inFolder = savedFiles.filter((f) => (f.folderId || null) === folder.id);
+        if (!inFolder.length) {
+          body.appendChild(emptyRow('このフォルダは空です'));
+        } else {
+          inFolder.forEach((file) => body.appendChild(makeListRow(file, {})));
+        }
+        listRows.appendChild(body);
+      });
 
-      const rootFiles = savedFiles
-        .filter((f) => !f.folderId || !folders.some((d) => d.id === f.folderId));
+    const rootFiles = savedFiles
+      .filter((f) => !f.folderId || !folders.some((d) => d.id === f.folderId));
 
-      if (folders.length && rootFiles.length) {
-        const div = document.createElement('div');
-        div.className = 'listSectionDivider';
-        listRows.appendChild(div);
-      }
-      if (!folders.length && !rootFiles.length) {
-        listRows.appendChild(emptyRow('保存された内容はまだありません'));
-        return;
-      }
-      rootFiles.forEach((file) => listRows.appendChild(makeListRow(file, {})));
+    if (folders.length && rootFiles.length) {
+      const div = document.createElement('div');
+      div.className = 'listSectionDivider';
+      listRows.appendChild(div);
+    }
+    if (!folders.length && !rootFiles.length) {
+      listRows.appendChild(emptyRow('保存された内容はまだありません'));
       return;
     }
-
-    // フォルダの中
-    const inFolder = savedFiles
-      .filter((f) => (f.folderId || null) === listView.folderId);
-    if (!inFolder.length) {
-      listRows.appendChild(emptyRow('このフォルダは空です'));
-      return;
-    }
-    inFolder.forEach((file) => listRows.appendChild(makeListRow(file, {})));
+    rootFiles.forEach((file) => listRows.appendChild(makeListRow(file, {})));
   }
 
   // 保存済みファイルを複製する。複製は元ファイルのすぐ後ろに挿入する
@@ -2246,12 +2299,15 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
       if (!window.confirm(msg)) return;
       savedFiles.forEach((f) => { if (f.folderId === folder.id) f.folderId = null; });
       folders = folders.filter((x) => x.id !== folder.id);
+      expandedFolders.delete(folder.id);
       persistFolders();
       persistSavedFiles();
       renderListRows();
     });
     actions.appendChild(renameB);
     actions.appendChild(delB);
+
+    if (expandedFolders.has(folder.id)) wrap.classList.add('expanded');
 
     const row = document.createElement('div');
     row.className = 'listRow folderRow';
@@ -2280,10 +2336,9 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
         row.style.transform = '';
         return;
       }
-      listView.folderId = folder.id;
-      updateListChrome();
+      if (expandedFolders.has(folder.id)) expandedFolders.delete(folder.id);
+      else expandedFolders.add(folder.id);
       renderListRows();
-      listRows.scrollTop = 0;
     });
 
     wrap.appendChild(actions);
@@ -2339,6 +2394,7 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
     let placeholder = null;
     let offX = 0, offY = 0;
     let autoDir = 0, rafId = 0;
+    let dragScope = null;
 
     function preventTouch(e) { e.preventDefault(); }
     function clearTimers() {
@@ -2431,6 +2487,9 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
       row.style.transform = '';
       if (navigator.vibrate) { try { navigator.vibrate(12); } catch (err) { /* noop */ } }
 
+      // 並び替えは今いる枠（ルート直下 or 展開中のフォルダの中）の中だけで完結させる
+      dragScope = wrap.parentNode;
+
       const r = wrap.getBoundingClientRect();
       offX = grabX - r.left;
       offY = grabY - r.top;
@@ -2452,21 +2511,21 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
 
     function fileWraps() {
       return Array.prototype.filter.call(
-        listRows.querySelectorAll('.listRowWrap'),
+        dragScope.querySelectorAll('.listRowWrap'),
         (w) => w !== wrap && w.querySelector('.listRow[data-file-id]')
       );
     }
     function updatePlaceholder(y) {
       if (!placeholder) return;
       const others = fileWraps();
-      if (!others.length) { listRows.appendChild(placeholder); return; }
+      if (!others.length) { dragScope.appendChild(placeholder); return; }
       let target = null;
       for (let i = 0; i < others.length; i++) {
         const rr = others[i].getBoundingClientRect();
         if (y < rr.top + rr.height / 2) { target = others[i]; break; }
       }
-      if (target) listRows.insertBefore(placeholder, target);
-      else listRows.insertBefore(placeholder, others[others.length - 1].nextSibling);
+      if (target) dragScope.insertBefore(placeholder, target);
+      else dragScope.insertBefore(placeholder, others[others.length - 1].nextSibling);
     }
     function edgeAutoScroll(y) {
       const lr = listRows.getBoundingClientRect();
@@ -2485,7 +2544,7 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
       autoDir = 0;
       if (rafId) { cancelAnimationFrame(rafId); rafId = 0; }
       if (placeholder && placeholder.parentNode) {
-        listRows.insertBefore(wrap, placeholder);
+        dragScope.insertBefore(wrap, placeholder);
         placeholder.remove();
       }
       placeholder = null;
@@ -2493,14 +2552,16 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
       wrap.style.width = wrap.style.left = wrap.style.top = '';
       listRows.classList.remove('isDragging');
       try { row.releasePointerCapture(pid); } catch (err) { /* noop */ }
-      commitOrderFromDom();
+      commitOrderFromDom(dragScope);
+      dragScope = null;
     }
   }
 
   // DOM 上のファイル行の並びを savedFiles に反映（表示中の行だけを、その枠内で入れ替える）
-  function commitOrderFromDom() {
+  function commitOrderFromDom(container) {
+    const scope = container || listRows;
     const shownIds = Array.prototype.map.call(
-      listRows.querySelectorAll('.listRow[data-file-id]'),
+      scope.querySelectorAll('.listRow[data-file-id]'),
       (r) => r.dataset.fileId
     );
     if (!shownIds.length) return;
@@ -2617,12 +2678,13 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
   }
 
   listBtn.addEventListener('click', () => {
+    if (isListScreenOpen()) { closeListScreen(); return; }
     autoSaveBeforeLeaving();
     openListScreen();
   });
+  listBackdrop.addEventListener('click', closeListScreen);
   listBackBtn.addEventListener('click', () => {
     if (listView.query.trim()) { setQuery(''); return; }
-    if (listView.folderId !== null) { goToRoot(); return; }
     closeListScreen();
   });
 
@@ -2667,7 +2729,7 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
 
       const hz = document.createElement('div');
       hz.className = 'wordChipHz';
-      hz.textContent = displayChars(word);
+      renderDisplayText(hz, word);
       chip.appendChild(hz);
 
       const py = document.createElement('div');
@@ -2742,9 +2804,8 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
       else closeWordbookScreen();
       return;
     }
-    if (!listScreen.hidden) {
+    if (isListScreenOpen()) {
       if (listView.query.trim()) setQuery('');
-      else if (listView.folderId !== null) goToRoot();
       else closeListScreen();
     }
   });
