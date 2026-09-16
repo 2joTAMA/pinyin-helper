@@ -153,10 +153,13 @@
     background:var(--ink-soft);
     position:relative;
     overflow:visible;
-    transition:padding .25s ease;
+    transition:padding .25s ease, height .25s ease, background-color .25s ease;
   }
+  /* 畳んだときは入力欄がぺちゃんこになったイメージで、横幅いっぱいの薄い帯（入力欄と同じ色）だけを残す */
   body.focusMode #inputWrap{
-    padding-top:0; padding-bottom:0;
+    padding:0;
+    height:5px;
+    background:var(--input-bg);
     border-bottom-color:transparent;
   }
   #zhInput{
@@ -201,10 +204,12 @@
     background:var(--input-bg-dim);
     color:var(--input-text);
     box-shadow:0 3px 5px rgba(0,0,0,0.35);
+    transition:bottom .25s ease;
   }
   #focusToggle svg{ width:13px; height:13px; display:block; transition:transform .2s ease; }
-  #focusToggle.active{ color:var(--seal); }
   #focusToggle.active svg{ transform:rotate(180deg); }
+  /* 畳んだ帯（高さ5px）から完全にぶら下がるよう、帯の下端に揃える */
+  body.focusMode #focusToggle{ bottom:-20px; }
   .miniBtn{
     width:22px; height:22px; border-radius:999px;
     background:rgba(42,38,32,0.18);
