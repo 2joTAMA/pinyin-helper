@@ -889,8 +889,8 @@
 
   <div id="wordbookScreen" hidden>
     <header>
-      <button id="wordbookBackBtn" class="iconBtn" type="button" aria-label="戻る" title="戻る">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+      <button id="wordbookMenuBtn" class="iconBtn" type="button" aria-label="保存一覧" title="保存一覧">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="6" x2="20" y2="6"></line><line x1="4" y1="12" x2="20" y2="12"></line><line x1="4" y1="18" x2="14" y2="18"></line></svg>
       </button>
       <span class="brand">単語帳</span>
       <div id="wordbookHeaderActions">
@@ -1006,7 +1006,7 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
   const modeFooterWordbookBtn = document.getElementById('modeFooterWordbookBtn');
 
   const wordbookScreen = document.getElementById('wordbookScreen');
-  const wordbookBackBtn = document.getElementById('wordbookBackBtn');
+  const wordbookMenuBtn = document.getElementById('wordbookMenuBtn');
   const wordSelectToggleBtn = document.getElementById('wordSelectToggleBtn');
   const wordDeleteBtn = document.getElementById('wordDeleteBtn');
   const wordSelectCount = document.getElementById('wordSelectCount');
@@ -2874,9 +2874,10 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
     closeListScreen();
   });
 
-  wordbookBackBtn.addEventListener('click', () => {
-    if (wordSelectMode) { exitWordSelectMode(); return; }
-    closeWordbookScreen();
+  wordbookMenuBtn.addEventListener('click', () => {
+    if (isListScreenOpen()) { closeListScreen(); return; }
+    autoSaveBeforeLeaving();
+    openListScreen();
   });
 
   wordSelectToggleBtn.addEventListener('click', () => {
