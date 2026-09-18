@@ -23,8 +23,10 @@
     --line:#4a463e;
     --warn:#e2574c;
     --ja-accent:#7fb3d5;
-    --footer1-h:48px;
-    --footer2-h:48px;
+    --footer-h:48px;
+    /* 以下2つは起動時にJS(syncFooterOffsets)が実測値で上書きする。ここでの値は読み込み直後の暫定値 */
+    --toolfooter-h:48px;
+    --footer-total-h:96px;
   }
   *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
   [hidden]{ display:none !important; }
@@ -126,40 +128,39 @@
   }
   .tabBtn.active{ color:var(--paper); border-bottom-color:var(--seal); }
 
-  /* ---------- footer 1: 入力／単語帳 切り替え（メニューを開くと隠れて非アクティブになる） ---------- */
+  /* ---------- footer 1: 入力／単語帳 切り替え（メニューを開くと隠れて非アクティブになる、単語帳画面では隠れない） ----------
+     bottom は JS(syncFooterOffsets)がフッター2の実測の高さを入れて、常にフッター2の真上に重なるようにする */
   #modeFooter{
-    position:fixed; left:0; right:0;
-    bottom:calc(var(--footer2-h) + env(safe-area-inset-bottom));
-    height:var(--footer1-h);
+    position:fixed; left:0; right:0; bottom:var(--toolfooter-h);
     z-index:55;
     display:flex;
-    background:var(--ink-soft);
     border-top:1px solid var(--line);
   }
   #modeFooter button{
     flex:1 1 50%;
+    height:var(--footer-h);
     display:flex; align-items:center; justify-content:center; gap:6px;
-    background:none; border:none;
-    color:var(--paper-dim);
+    border:none;
     font-size:14px; font-weight:700;
   }
   #modeFooter button svg{ width:16px; height:16px; display:block; }
-  #modeFooter button + button{ border-left:1px solid var(--line); }
-  #modeFooterWordbookBtn{ color:var(--seal); }
-  #modeFooter button:active{ background:rgba(217,208,189,0.08); }
+  #modeFooterInputBtn{ background:var(--paper); color:var(--input-text); }
+  #modeFooterInputBtn:active{ background:var(--input-bg-dim); }
+  #modeFooterWordbookBtn{ background:var(--seal); color:var(--ink); }
+  #modeFooterWordbookBtn:active{ background:var(--seal-soft); color:var(--paper); }
 
-  /* ---------- footer 2: 声調123／声調記号／日本字体（画面最下部の安全余白を使い、メニューを開いても隠れない） ---------- */
+  /* ---------- footer 2: 声調123／声調記号／日本字体（画面最下部の安全余白を使い、メニューを開いても・単語帳画面でも隠れない） ---------- */
   #toolFooter{
     position:fixed; left:0; right:0; bottom:0;
-    height:calc(var(--footer2-h) + env(safe-area-inset-bottom));
-    padding-bottom:env(safe-area-inset-bottom);
     z-index:95;
     display:flex;
     background:var(--ink-soft);
     border-top:1px solid var(--line);
+    padding-bottom:env(safe-area-inset-bottom, 0px);
   }
   #toolFooter button{
     flex:1 1 33.333%;
+    height:var(--footer-h);
     display:flex; align-items:center; justify-content:center; gap:4px;
     background:none; border:none;
     color:var(--paper-dim);
@@ -167,9 +168,9 @@
   }
   #toolFooter button + button{ border-left:1px solid var(--line); }
   #toolFooter button svg{ width:18px; height:18px; display:block; }
-  #toneToggle.active{ color:var(--seal); }
-  #contourToggle.active{ color:var(--seal); }
-  #jaKanjiToggle.active{ color:var(--ja-accent); }
+  #toneToggle.active{ background:var(--seal); color:var(--ink); }
+  #contourToggle.active{ background:var(--seal); color:var(--ink); }
+  #jaKanjiToggle.active{ background:var(--ja-accent); color:var(--ink); }
 
   /* ---------- input ---------- */
   #inputWrap{
@@ -309,7 +310,7 @@
     flex:1 1 auto;
     display:flex; flex-direction:column;
     min-height:0;
-    padding-bottom:calc(var(--footer1-h) + var(--footer2-h) + env(safe-area-inset-bottom));
+    padding-bottom:var(--footer-total-h);
   }
 
   #results{
@@ -405,7 +406,7 @@
   /* ---------- 単漢字タップ時の単語シート ---------- */
   #wordSheet{
     position:fixed; left:0; right:0;
-    bottom:calc(var(--footer1-h) + var(--footer2-h) + env(safe-area-inset-bottom));
+    bottom:var(--footer-total-h);
     z-index:70;
     background:var(--ink-soft);
     border-top:1px solid var(--line);
@@ -517,7 +518,7 @@
     background:var(--ink-soft);
   }
   #listHeaderActions{ display:flex; align-items:center; gap:0; flex:0 0 auto; }
-  #listRows{ flex:1 1 auto; overflow-y:auto; padding:2px 16px calc(16px + var(--footer2-h) + env(safe-area-inset-bottom)); }
+  #listRows{ flex:1 1 auto; overflow-y:auto; padding:2px 16px calc(16px + var(--toolfooter-h)); }
   .listEmpty{ padding:40px 8px; text-align:center; color:var(--paper-dim); font-size:13px; }
   .listRowWrap{ position:relative; overflow:hidden; border-bottom:1px dashed var(--line); }
   .listRowActions{ position:absolute; top:0; right:0; bottom:0; display:flex; }
@@ -583,7 +584,7 @@
 
   /* ---------- 単語帳画面 ---------- */
   #wordbookScreen{
-    position:fixed; inset:0; z-index:96;
+    position:fixed; inset:0; z-index:50;
     background:var(--ink);
     display:flex; flex-direction:column;
   }
@@ -611,7 +612,7 @@
   #wordGrid{
     flex:1 1 auto; overflow-y:auto;
     display:grid; grid-template-columns:1fr 1fr; gap:8px;
-    padding:10px 16px 16px;
+    padding:10px 16px calc(16px + var(--footer-total-h));
     align-content:start;
   }
   .wordChip{
@@ -991,6 +992,8 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
   const listSearchInput = document.getElementById('listSearchInput');
   const listSearchClear = document.getElementById('listSearchClear');
 
+  const modeFooter = document.getElementById('modeFooter');
+  const toolFooter = document.getElementById('toolFooter');
   const modeFooterInputBtn = document.getElementById('modeFooterInputBtn');
   const modeFooterWordbookBtn = document.getElementById('modeFooterWordbookBtn');
 
@@ -1062,6 +1065,7 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
     '悦', '岳', '遥', '瑶', '岩', '涌', '横', '恒', '回', '谷', '胡', '干',
     '画', '核', '困', '弯', '温',
     '玩', '曲', '泄', '家', '咸', '俊',
+    '宝',
   ]);
   // 簡体字1字に新字体・旧字体など複数の候補があり、逆引きがたまたま違う方（主に旧字体）を
   // 選んでしまっているケース。気づいたものはここで正しい新字体を指定して上書きする。
@@ -1082,6 +1086,7 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
     '圆': '円', '缘': '縁', '龟': '亀', '归': '帰',
     '让': '譲', '围': '囲', '稳': '穏',
     '聪': '聡', '乡': '郷', '觉': '覚', '险': '険', '关': '関', '欢': '歓', '怀': '懐',
+    '卖': '売', '广': '広',
   };
   function toJapaneseKanji(text) {
     let out = '';
@@ -2878,6 +2883,19 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
     }
   });
 
+  // ================= フッター2段の実測サイズをCSS変数へ反映 =================
+  // env(safe-area-inset-bottom)やbutton内のstretch挙動はブラウザ差が出やすいため、
+  // calc()に頼らず実際に描画された高さを測って var(--toolfooter-h) / var(--footer-total-h) に入れる。
+  function syncFooterOffsets() {
+    const toolH = toolFooter.offsetHeight;
+    const modeH = modeFooter.offsetHeight;
+    modeFooter.style.bottom = toolH + 'px';
+    document.documentElement.style.setProperty('--toolfooter-h', toolH + 'px');
+    document.documentElement.style.setProperty('--footer-total-h', (toolH + modeH) + 'px');
+  }
+  window.addEventListener('resize', syncFooterOffsets);
+  window.addEventListener('orientationchange', syncFooterOffsets);
+
   // ================= 起動 =================
   lastCommittedValue = input.value;
   setSubtitleDisplay('');
@@ -2888,6 +2906,7 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
   focusToggle.title = state.focusMode ? '入力欄を表示' : '入力欄を畳んで広く表示';
   autoGrow();
   renderCurrentMode();
+  syncFooterOffsets();
 })();
 
 </script>
