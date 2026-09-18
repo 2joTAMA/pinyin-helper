@@ -2369,7 +2369,7 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
 
     wrap.appendChild(actions);
     wrap.appendChild(row);
-    attachFileRowGestures(wrap, row, () => { loadFile(file); closeListScreen(); }, !opts.showFolder);
+    attachFileRowGestures(wrap, row, () => { loadFile(file); closeWordbookScreen(); closeListScreen(); }, !opts.showFolder);
     return wrap;
   }
 
