@@ -414,7 +414,9 @@
     box-shadow:0 -8px 24px rgba(0,0,0,0.4);
     max-height:45vh;
     display:flex; flex-direction:column;
-    transform:translateY(100%);
+    /* bottomをfooter分だけ底上げしているので、100%移動だけでは画面外まで届かない。
+       その分(--footer-total-h)を余計に動かして確実に隠す */
+    transform:translateY(calc(100% + var(--footer-total-h)));
     transition:transform .22s ease;
     pointer-events:none;
   }
@@ -598,7 +600,9 @@
   }
   #wordbookHeaderActions{ display:flex; align-items:center; gap:2px; flex:0 0 auto; }
   #wordSelectCount{ font-size:12px; color:var(--paper-dim); margin-right:2px; white-space:nowrap; }
+  #wordSelectToggleBtn{ width:auto; height:auto; flex-direction:column; gap:1px; padding:3px 4px 2px; }
   #wordSelectToggleBtn.active{ color:var(--seal); }
+  .iconBtnLabel{ font-size:9px; font-weight:600; line-height:1; letter-spacing:0.2px; }
   #wordAddBar{
     flex:0 0 auto;
     padding:10px 16px 6px;
@@ -626,6 +630,9 @@
   .wordChipHz{ font-size:20px; font-weight:600; color:var(--paper); letter-spacing:1px; }
   .wordChipPy{ font-size:19px; font-weight:600; color:var(--seal); letter-spacing:0.2px; }
   .wordChip.selected .wordChipPy{ color:var(--paper); }
+  .wordChipContourRow{ justify-content:center; row-gap:2px; }
+  .wordChipContourRow .cChar{ font-size:20px; }
+  .wordChipContourRow .cTone{ width:17px; height:12px; }
 
   /* ---------- saved list: search + folders ---------- */
   #listSearchBar{
@@ -893,6 +900,7 @@
         </button>
         <button id="wordSelectToggleBtn" class="iconBtn" type="button" aria-label="選択" title="選択">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"></rect><polyline points="8 12 11 15 16 9"></polyline></svg>
+          <span class="iconBtnLabel">選択</span>
         </button>
       </div>
     </header>
@@ -1223,23 +1231,17 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
       .join(' ');
   }
 
-  // 文章モード用：漢字1文字ずつの下にその声調カーブSVGを揃えて配置する（アルファベット非表示）
-  function buildContourBlock(normalizedLine) {
-    const block = document.createElement('div');
-    block.className = 'lineBlock contourBlock';
-
-    const row = document.createElement('div');
-    row.className = 'contourRow';
-
+  // 漢字1文字ずつの下にその声調カーブSVGを揃えて配置する行を作る（アルファベット非表示のとき共通で使う）
+  function appendContourCols(row, text) {
     let groups = [];
     if (pp && pp.segment) {
       try {
-        groups = pp.segment(normalizedLine, { format: pp.OutputFormat.AllArray, toneType: 'num' });
+        groups = pp.segment(text, { format: pp.OutputFormat.AllArray, toneType: 'num' });
       } catch (e) { groups = []; }
     }
     const chars = groups.length
       ? groups.reduce((acc, g) => acc.concat(g), [])
-      : Array.from(normalizedLine).map((c) => ({ origin: c, result: c }));
+      : Array.from(text).map((c) => ({ origin: c, result: c }));
 
     chars.forEach(({ origin, result }) => {
       const col = document.createElement('span');
@@ -1258,9 +1260,27 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
 
       row.appendChild(col);
     });
+  }
+
+  // 文章モード用：行全体を漢字＋声調カーブの行にする
+  function buildContourBlock(normalizedLine) {
+    const block = document.createElement('div');
+    block.className = 'lineBlock contourBlock';
+
+    const row = document.createElement('div');
+    row.className = 'contourRow';
+    appendContourCols(row, normalizedLine);
 
     block.appendChild(row);
     return block;
+  }
+
+  // 単語帳用：チップの中に収まる小さめの漢字＋声調カーブの行を作る
+  function buildWordContourRow(word) {
+    const row = document.createElement('div');
+    row.className = 'contourRow wordChipContourRow';
+    appendContourCols(row, word);
+    return row;
   }
 
   // ================= surume（背景キャラ） =================
@@ -1667,6 +1687,11 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
     });
   });
 
+  // 単語帳を開いている間に声調表示の設定を切り替えたら、単語帳側も即座に反映する
+  function refreshWordbookIfOpen() {
+    if (!wordbookScreen.hidden) renderWordGrid();
+  }
+
   toneToggle.addEventListener('click', () => {
     if (state.contourOn) {
       // 記号モード中に押した場合は、記号モードを抜けて数字モードへ切り替える
@@ -1680,6 +1705,7 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
     toneToggle.classList.toggle('active', state.toneType === 'num');
     toneToggle.setAttribute('aria-pressed', state.toneType === 'num' ? 'true' : 'false');
     renderCurrentMode();
+    refreshWordbookIfOpen();
   });
 
   contourToggle.addEventListener('click', () => {
@@ -1687,6 +1713,7 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
     contourToggle.classList.toggle('active', state.contourOn);
     contourToggle.setAttribute('aria-pressed', state.contourOn ? 'true' : 'false');
     renderCurrentMode();
+    refreshWordbookIfOpen();
   });
 
   jaKanjiToggle.addEventListener('click', () => {
@@ -1694,6 +1721,7 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
     jaKanjiToggle.classList.toggle('active', state.jaKanjiOn);
     jaKanjiToggle.setAttribute('aria-pressed', state.jaKanjiOn ? 'true' : 'false');
     renderCurrentMode();
+    refreshWordbookIfOpen();
   });
 
   focusToggle.addEventListener('click', () => {
@@ -2796,15 +2824,19 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
       const chip = document.createElement('div');
       chip.className = 'wordChip' + (selectedWords.has(word) ? ' selected' : '');
 
-      const hz = document.createElement('div');
-      hz.className = 'wordChipHz';
-      renderDisplayText(hz, word);
-      chip.appendChild(hz);
+      if (state.contourOn) {
+        chip.appendChild(buildWordContourRow(word));
+      } else {
+        const hz = document.createElement('div');
+        hz.className = 'wordChipHz';
+        renderDisplayText(hz, word);
+        chip.appendChild(hz);
 
-      const py = document.createElement('div');
-      py.className = 'wordChipPy';
-      py.textContent = lineToPinyin(word);
-      chip.appendChild(py);
+        const py = document.createElement('div');
+        py.className = 'wordChipPy';
+        py.textContent = lineToPinyin(word);
+        chip.appendChild(py);
+      }
 
       chip.addEventListener('click', () => {
         if (!wordSelectMode) return;
@@ -2882,6 +2914,31 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
       else closeListScreen();
     }
   });
+
+  // ================= スマホでの左→右スワイプで保存一覧メニューを開く =================
+  let edgeSwipeStart = null;
+  document.addEventListener('pointerdown', (e) => {
+    if (e.pointerType !== 'touch') return;
+    if (isListScreenOpen()) return;
+    if (state.reordering) return;
+    if (!saveModal.hidden || !folderPicker.hidden || !nameModal.hidden) return;
+    edgeSwipeStart = { x: e.clientX, y: e.clientY, t: Date.now() };
+  }, { passive: true });
+  document.addEventListener('pointerup', (e) => {
+    if (!edgeSwipeStart) return;
+    const { x, y, t } = edgeSwipeStart;
+    edgeSwipeStart = null;
+    if (e.pointerType !== 'touch') return;
+    if (isListScreenOpen()) return;
+    if (state.reordering) return;
+    const dx = e.clientX - x;
+    const dy = e.clientY - y;
+    if (Date.now() - t > 700) return;
+    if (dx > 60 && Math.abs(dy) < 50 && dx > Math.abs(dy) * 1.5) {
+      openListScreen();
+    }
+  }, { passive: true });
+  document.addEventListener('pointercancel', () => { edgeSwipeStart = null; }, { passive: true });
 
   // ================= フッター2段の実測サイズをCSS変数へ反映 =================
   // env(safe-area-inset-bottom)やbutton内のstretch挙動はブラウザ差が出やすいため、
