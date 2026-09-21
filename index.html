@@ -1558,10 +1558,10 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
     setActiveWordCard(null);
     activeWordChar = null;
   }
-  // シートを開いたまま声調123／声調カーブ／日本字体の表示設定が変わったとき用。
-  // renderCurrentMode()が内部でシートを閉じてしまうので、呼び出し側で閉じる直前の文字を
-  // 覚えておいて渡してもらい、新しい表示設定のカードを探して同じ文字でシートを開き直す。
-  // 閉じてすぐ開き直すため、同一のJS実行内であれば見た目のアニメーションは発生しない。
+  // 声調123／声調カーブ／日本字体の表示設定が変わったとき用。呼び出し側は
+  // renderCurrentMode(true)でシート自体を閉じずに描画し直しているので、ここでは
+  // 新しい表示設定のカードを探して中身だけを作り直す（'open'クラスは既に付いたままなので
+  // classList.addは何もしない＝閉じるアニメーションは一切発生しない）
   function reopenWordSheetIfNeeded(ch) {
     if (!ch) return;
     const card = kanjiGrid.querySelector('.kcard[data-char="' + CSS.escape(ch) + '"]');
@@ -1794,7 +1794,7 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
     }
     toneToggle.classList.toggle('active', state.toneType === 'num');
     toneToggle.setAttribute('aria-pressed', state.toneType === 'num' ? 'true' : 'false');
-    renderCurrentMode();
+    renderCurrentMode(!!reopenChar);
     refreshWordbookIfOpen();
     reopenWordSheetIfNeeded(reopenChar);
   });
@@ -1804,7 +1804,7 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
     state.contourOn = !state.contourOn;
     contourToggle.classList.toggle('active', state.contourOn);
     contourToggle.setAttribute('aria-pressed', state.contourOn ? 'true' : 'false');
-    renderCurrentMode();
+    renderCurrentMode(!!reopenChar);
     refreshWordbookIfOpen();
     reopenWordSheetIfNeeded(reopenChar);
   });
@@ -1814,7 +1814,7 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
     state.jaKanjiOn = !state.jaKanjiOn;
     jaKanjiToggle.classList.toggle('active', state.jaKanjiOn);
     jaKanjiToggle.setAttribute('aria-pressed', state.jaKanjiOn ? 'true' : 'false');
-    renderCurrentMode();
+    renderCurrentMode(!!reopenChar);
     refreshWordbookIfOpen();
     reopenWordSheetIfNeeded(reopenChar);
   });
@@ -1828,8 +1828,10 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
   });
 
   // ================= 描画の切替 =================
-  function renderCurrentMode() {
-    closeWordSheet();
+  // keepWordSheet=trueのときは単語シートを閉じない（声調123／声調カーブ／日本字体の
+  // 表示切り替えボタン用。呼び出し側でシートの中身を後から作り直す）
+  function renderCurrentMode(keepWordSheet) {
+    if (!keepWordSheet) closeWordSheet();
     const trimmed = input.value ? input.value.trim() : '';
     updateSurume(trimmed !== '');
     clearBtn.classList.toggle('show', input.value.length > 0);
