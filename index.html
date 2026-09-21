@@ -128,7 +128,7 @@
   }
   .tabBtn.active{ color:var(--paper); border-bottom-color:var(--seal); }
 
-  /* ---------- footer 1: 入力／単語帳 切り替え（メニューを開くと隠れて非アクティブになる、単語帳画面では隠れない） ----------
+  /* ---------- footer 1: 入力／単語帳／全漢字 切り替え（メニューを開くと隠れて非アクティブになる、単語帳・全漢字画面では隠れない） ----------
      bottom は JS(syncFooterOffsets)がフッター2の実測の高さを入れて、常にフッター2の真上に重なるようにする */
   #modeFooter{
     position:fixed; left:0; right:0; bottom:var(--toolfooter-h);
@@ -137,7 +137,7 @@
     border-top:1px solid var(--line);
   }
   #modeFooter button{
-    flex:1 1 50%;
+    flex:1 1 0;
     height:var(--footer-h);
     display:flex; align-items:center; justify-content:center; gap:6px;
     border:none;
@@ -148,6 +148,8 @@
   #modeFooterInputBtn:active{ background:var(--input-bg-dim); }
   #modeFooterWordbookBtn{ background:var(--seal); color:var(--ink); }
   #modeFooterWordbookBtn:active{ background:var(--seal-soft); color:var(--paper); }
+  #modeFooterAllKanjiBtn{ background:var(--paper-dim); color:var(--ink); }
+  #modeFooterAllKanjiBtn:active{ background:var(--input-bg-dim); }
 
   /* ---------- footer 2: 声調123／声調記号／日本字体（画面最下部の安全余白を使い、メニューを開いても・単語帳画面でも隠れない） ---------- */
   #toolFooter{
@@ -638,6 +640,40 @@
   .wordChipContourRow .cChar{ font-size:20px; }
   .wordChipContourRow .cTone{ width:17px; height:12px; }
 
+  /* ---------- 全漢字画面（登録した漢字を常にピンインごとにグループ表示） ---------- */
+  #allKanjiScreen{
+    position:fixed; inset:0; z-index:50;
+    background:var(--ink);
+    display:flex; flex-direction:column;
+  }
+  #allKanjiScreen header{
+    flex:0 0 auto;
+    display:flex; align-items:center; justify-content:space-between;
+    padding:8px 12px;
+    padding-top:calc(8px + env(safe-area-inset-top));
+    border-bottom:1px solid var(--line);
+    background:var(--ink-soft);
+  }
+  #allKanjiAddBar{
+    flex:0 0 auto;
+    padding:10px 16px 6px;
+  }
+  #allKanjiAddInput{
+    width:100%; background:var(--input-bg); color:var(--input-text);
+    border:none; border-radius:10px; padding:11px 12px;
+    font-size:15px; font-family:inherit;
+  }
+  #allKanjiAddInput:focus{ outline:2px solid var(--seal); }
+  #allKanjiGrid{
+    flex:1 1 auto;
+    overflow-y:auto;
+    -webkit-overflow-scrolling:touch;
+    padding:6px 16px calc(16px + var(--footer-total-h));
+  }
+  /* 単語帳に登録単語が1つもない漢字＝タップしても何も起きないので、少し薄い色にして示す */
+  .khz.noWord{ color:var(--paper-dim); }
+  .khz.noWord .jaChanged{ color:var(--paper-dim); }
+
   /* ---------- saved list: search + folders ---------- */
   #listSearchBar{
     flex:0 0 auto;
@@ -828,6 +864,10 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
       単語帳
     </button>
+    <button id="modeFooterAllKanjiBtn" type="button">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="8" height="8" rx="1.5"></rect><rect x="13" y="3" width="8" height="8" rx="1.5"></rect><rect x="3" y="13" width="8" height="8" rx="1.5"></rect><rect x="13" y="13" width="8" height="8" rx="1.5"></rect></svg>
+      全漢字
+    </button>
   </div>
 
   <div id="toolFooter">
@@ -916,6 +956,20 @@
       <input id="wordAddInput" type="text" placeholder="単語を入力してEnterで登録（4文字まで）" maxlength="12" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="done" />
     </div>
     <div id="wordGrid"></div>
+  </div>
+
+  <div id="allKanjiScreen" hidden>
+    <header>
+      <button id="allKanjiMenuBtn" class="iconBtn" type="button" aria-label="保存一覧" title="保存一覧">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="6" x2="20" y2="6"></line><line x1="4" y1="12" x2="20" y2="12"></line><line x1="4" y1="18" x2="14" y2="18"></line></svg>
+      </button>
+      <span class="brand">全漢字</span>
+      <div class="iconBtn" aria-hidden="true"></div>
+    </header>
+    <div id="allKanjiAddBar">
+      <input id="allKanjiAddInput" type="text" placeholder="文字を入力してEnterで漢字を登録" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="done" />
+    </div>
+    <div id="allKanjiGrid"></div>
   </div>
 
   <div id="folderPicker" class="modalOverlay" hidden>
@@ -1012,6 +1066,7 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
   const toolFooter = document.getElementById('toolFooter');
   const modeFooterInputBtn = document.getElementById('modeFooterInputBtn');
   const modeFooterWordbookBtn = document.getElementById('modeFooterWordbookBtn');
+  const modeFooterAllKanjiBtn = document.getElementById('modeFooterAllKanjiBtn');
 
   const wordbookScreen = document.getElementById('wordbookScreen');
   const wordbookMenuBtn = document.getElementById('wordbookMenuBtn');
@@ -1022,6 +1077,11 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
   const wordGrid = document.getElementById('wordGrid');
   const wordSortToggle = document.getElementById('wordSortToggle');
   const wordSortLabel = document.getElementById('wordSortLabel');
+
+  const allKanjiScreen = document.getElementById('allKanjiScreen');
+  const allKanjiMenuBtn = document.getElementById('allKanjiMenuBtn');
+  const allKanjiAddInput = document.getElementById('allKanjiAddInput');
+  const allKanjiGrid = document.getElementById('allKanjiGrid');
 
   const folderPicker = document.getElementById('folderPicker');
   const folderPickerList = document.getElementById('folderPickerList');
@@ -1475,13 +1535,15 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
 
   // 漢字だけを大きく表示。声調数字は123トグルON時のみ右肩に小さく（絶対配置なのでレイアウトは動かない）。
   // mismatch=true のときは、そのグループの代表音と読みが違う＝警告色で表示。
+  // 単語帳にその漢字を含む単語が1つもないときはタップしても何も起きないので、少し薄い色で示す。
   function makeCard(ch, mismatch) {
+    const hasWord = savedWords.some((w) => w.indexOf(ch) >= 0);
     const card = document.createElement('div');
     card.className = 'kcard' + (state.contourOn ? ' contourOn' : '');
     card.dataset.char = ch;
 
     const hz = document.createElement('span');
-    hz.className = 'khz' + (mismatch ? ' mismatch' : '');
+    hz.className = 'khz' + (mismatch ? ' mismatch' : '') + (hasWord ? '' : ' noWord');
     renderDisplayText(hz, ch);
     card.appendChild(hz);
 
@@ -1498,7 +1560,7 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
     }
 
     card.addEventListener('click', () => {
-      if (state.reordering) return;
+      if (state.reordering || !hasWord) return;
       openWordSheetFor(ch, card);
     });
 
@@ -1564,7 +1626,10 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
   // classList.addは何もしない＝閉じるアニメーションは一切発生しない）
   function reopenWordSheetIfNeeded(ch) {
     if (!ch) return;
-    const card = kanjiGrid.querySelector('.kcard[data-char="' + CSS.escape(ch) + '"]');
+    // シートは単漢字モードのグリッドか全漢字ページのグリッドのどちらからでも開けるので、
+    // 今表示されている方を探す
+    const grid = !allKanjiScreen.hidden ? allKanjiGrid : kanjiGrid;
+    const card = grid.querySelector('.kcard[data-char="' + CSS.escape(ch) + '"]');
     openWordSheetFor(ch, card);
   }
   // カードでもシート自身でも表示切り替えボタンでもない場所をタップしたら閉じる
@@ -1617,6 +1682,43 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
     updateKanjiToolbarUI(total, isGroupedView);
 
     if (state.reordering) attachDragHandlers();
+  }
+
+  // ================= 全漢字ページ =================
+  // 登録済みの漢字を常にピンインでグループ化して表示する（グループ内は登録順のまま）。
+  function renderAllKanjiGrid() {
+    allKanjiGrid.innerHTML = '';
+    if (!allKanji.length) {
+      allKanjiGrid.innerHTML = '<div class="listEmpty">まだ漢字が登録されていません</div>';
+      return;
+    }
+
+    const groups = new Map();
+    allKanji.forEach((ch) => {
+      const key = getBasePinyin(ch) || ch;
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(ch);
+    });
+
+    const orderedKeys = Array.from(groups.keys()).sort(compareGroupKeys);
+    const frag = document.createDocumentFragment();
+    orderedKeys.forEach((key) => {
+      const wrap = document.createElement('div');
+      wrap.className = 'kgroup';
+
+      const label = document.createElement('div');
+      label.className = 'kgroupLabel';
+      label.innerHTML = '<span>' + escapeHtml(key) + '</span>';
+      wrap.appendChild(label);
+
+      const row = document.createElement('div');
+      row.className = 'kgroupRow';
+      groups.get(key).forEach((ch) => row.appendChild(makeCard(ch, false)));
+      wrap.appendChild(row);
+
+      frag.appendChild(wrap);
+    });
+    allKanjiGrid.appendChild(frag);
   }
 
   function updateKanjiToolbarUI(charCount, isGroupedView) {
@@ -1780,6 +1882,10 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
   function refreshWordbookIfOpen() {
     if (!wordbookScreen.hidden) renderWordGrid();
   }
+  // 全漢字ページを開いている間も同様に即座に反映する
+  function refreshAllKanjiIfOpen() {
+    if (!allKanjiScreen.hidden) renderAllKanjiGrid();
+  }
 
   toneToggle.addEventListener('click', () => {
     const reopenChar = wordSheet.classList.contains('open') ? activeWordChar : null;
@@ -1796,6 +1902,7 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
     toneToggle.setAttribute('aria-pressed', state.toneType === 'num' ? 'true' : 'false');
     renderCurrentMode(!!reopenChar);
     refreshWordbookIfOpen();
+    refreshAllKanjiIfOpen();
     reopenWordSheetIfNeeded(reopenChar);
   });
 
@@ -1806,6 +1913,7 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
     contourToggle.setAttribute('aria-pressed', state.contourOn ? 'true' : 'false');
     renderCurrentMode(!!reopenChar);
     refreshWordbookIfOpen();
+    refreshAllKanjiIfOpen();
     reopenWordSheetIfNeeded(reopenChar);
   });
 
@@ -1816,6 +1924,7 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
     jaKanjiToggle.setAttribute('aria-pressed', state.jaKanjiOn ? 'true' : 'false');
     renderCurrentMode(!!reopenChar);
     refreshWordbookIfOpen();
+    refreshAllKanjiIfOpen();
     reopenWordSheetIfNeeded(reopenChar);
   });
 
@@ -1956,6 +2065,35 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
     const del = new Set(words);
     savedWords = savedWords.filter((w) => !del.has(w));
     persistWords();
+  }
+
+  // ---------- 全漢字（単語帳とは別に、登録した漢字を常にピンインごとにグループ表示するページ） ----------
+  const ALL_KANJI_KEY = 'pinyinHelperAllKanji_v1';
+  function loadAllKanji() {
+    try {
+      const raw = localStorage.getItem(ALL_KANJI_KEY);
+      const arr = raw ? JSON.parse(raw) : [];
+      return Array.isArray(arr) ? arr : [];
+    } catch (e) { return []; }
+  }
+  function persistAllKanji() {
+    try { localStorage.setItem(ALL_KANJI_KEY, JSON.stringify(allKanji)); } catch (e) { /* noop */ }
+  }
+  let allKanji = loadAllKanji(); // 登録順（古い順）
+
+  // 入力された文字列から漢字だけを取り出し、まだ登録していないものだけ末尾に追加する（重複は自動で無視）
+  function addAllKanji(raw) {
+    const simplified = normalizeToSimplified(raw || '');
+    const seen = new Set(allKanji);
+    let added = false;
+    for (const ch of simplified) {
+      if (!HANZI_RE.test(ch) || seen.has(ch)) continue;
+      seen.add(ch);
+      allKanji.push(ch);
+      added = true;
+    }
+    if (added) persistAllKanji();
+    return added;
   }
 
   // ---------- バックアップの書き出し／読み込み ----------
@@ -2460,7 +2598,7 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
 
     wrap.appendChild(actions);
     wrap.appendChild(row);
-    attachFileRowGestures(wrap, row, () => { loadFile(file); closeWordbookScreen(); closeListScreen(); }, !opts.showFolder);
+    attachFileRowGestures(wrap, row, () => { loadFile(file); closeWordbookScreen(); closeAllKanjiScreen(); closeListScreen(); }, !opts.showFolder);
     return wrap;
   }
 
@@ -2948,6 +3086,7 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
   }
 
   function openWordbookScreen() {
+    closeAllKanjiScreen();
     closeWordSheet();
     exitWordSelectMode();
     wordAddInput.value = '';
@@ -2959,9 +3098,23 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
     wordbookScreen.hidden = true;
   }
 
+  function openAllKanjiScreen() {
+    closeWordbookScreen();
+    closeWordSheet();
+    allKanjiAddInput.value = '';
+    renderAllKanjiGrid();
+    allKanjiScreen.hidden = false;
+    setTimeout(() => allKanjiAddInput.focus(), 0);
+  }
+  function closeAllKanjiScreen() {
+    allKanjiScreen.hidden = true;
+  }
+
   modeFooterWordbookBtn.addEventListener('click', openWordbookScreen);
+  modeFooterAllKanjiBtn.addEventListener('click', openAllKanjiScreen);
   modeFooterInputBtn.addEventListener('click', () => {
     closeWordbookScreen();
+    closeAllKanjiScreen();
     closeListScreen();
   });
 
@@ -2969,6 +3122,24 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
     if (isListScreenOpen()) { closeListScreen(); return; }
     autoSaveBeforeLeaving();
     openListScreen();
+  });
+
+  allKanjiMenuBtn.addEventListener('click', () => {
+    if (isListScreenOpen()) { closeListScreen(); return; }
+    autoSaveBeforeLeaving();
+    openListScreen();
+  });
+
+  // Enterを押すたびに1件ずつ、入力に含まれる漢字を全部登録する（重複は自動で無視）
+  let allKanjiAddComposing = false;
+  allKanjiAddInput.addEventListener('compositionstart', () => { allKanjiAddComposing = true; });
+  allKanjiAddInput.addEventListener('compositionend', () => { allKanjiAddComposing = false; });
+  allKanjiAddInput.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' || allKanjiAddComposing || e.isComposing) return;
+    e.preventDefault();
+    addAllKanji(allKanjiAddInput.value);
+    allKanjiAddInput.value = '';
+    renderAllKanjiGrid();
   });
 
   wordSelectToggleBtn.addEventListener('click', () => {
@@ -3015,6 +3186,7 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
       else closeWordbookScreen();
       return;
     }
+    if (!allKanjiScreen.hidden) { closeAllKanjiScreen(); return; }
     if (isListScreenOpen()) {
       if (listView.query.trim()) setQuery('');
       else closeListScreen();
