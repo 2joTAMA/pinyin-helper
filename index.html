@@ -23,6 +23,7 @@
     --line:#4a463e;
     --warn:#e2574c;
     --ja-accent:#7fb3d5;
+    --ja-accent-dim:#7e93a1;
     --footer-h:48px;
     /* 以下2つは起動時にJS(syncFooterOffsets)が実測値で上書きする。ここでの値は読み込み直後の暫定値 */
     --toolfooter-h:48px;
@@ -672,7 +673,8 @@
   }
   /* 単語帳に登録単語が1つもない漢字＝タップしても何も起きないので、少し薄い色にして示す */
   .khz.noWord{ color:var(--paper-dim); }
-  .khz.noWord .jaChanged{ color:var(--paper-dim); }
+  /* グレーの中でも少し青みを残し、日本字体に変換済みの字だけは区別できるようにする */
+  .khz.noWord .jaChanged{ color:var(--ja-accent-dim); }
 
   /* ---------- saved list: search + folders ---------- */
   #listSearchBar{
