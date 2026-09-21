@@ -636,12 +636,13 @@
   }
   #wordAddInput:focus{ outline:2px solid var(--seal); }
   #wordGrid{
-    flex:1 1 auto; overflow-y:auto;
-    display:grid; grid-template-columns:1fr 1fr; gap:8px;
+    flex:1 1 auto; overflow-y:auto; overflow-x:hidden;
+    display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:8px;
     padding:10px 16px calc(16px + var(--footer-total-h));
     align-content:start;
   }
   .wordChip{
+    min-width:0;
     background:var(--ink-soft); border:1px solid var(--line); border-radius:10px;
     padding:7px 5px;
     display:flex; flex-direction:column; align-items:center; gap:1px;
@@ -651,9 +652,12 @@
   .wordChip.selected{ border-color:var(--seal); background:var(--seal-soft); }
   .wordChipHz{ font-size:20px; font-weight:600; color:var(--paper); letter-spacing:1px; }
   /* 声調123／記号表記を切り替えても縦幅が動かないよう高さを固定し、1行に収まる幅まで
-     JS(fitWordChipPy)が自動で文字サイズを縮める。それでも収まらなければ省略記号で切る。 */
+     JS(fitWordChipPy)が自動で文字サイズを縮める。それでも収まらなければ省略記号で切る。
+     min-width:0とoverflow:hiddenがないと、white-space:nowrapの中身の最小幅がグリッドの
+     列幅を押し広げてしまい、画面全体が横スクロールしてしまうので必須。 */
   .wordChipPy{
     width:100%;
+    min-width:0;
     height:24px;
     display:flex; align-items:center; justify-content:center;
     overflow:hidden;
