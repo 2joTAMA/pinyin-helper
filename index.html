@@ -1558,13 +1558,14 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
     setActiveWordCard(null);
     activeWordChar = null;
   }
-  // シートを開いたまま声調123／声調カーブ／日本字体の表示設定が変わったときに、
-  // シートの中身とハイライト中のカードを新しい表示に合わせて更新する
-  function refreshWordSheetIfOpen() {
-    if (!wordSheet.classList.contains('open') || !activeWordChar) return;
-    if (!renderWordSheetContent(activeWordChar)) { closeWordSheet(); return; }
-    const newCard = kanjiGrid.querySelector('.kcard[data-char="' + CSS.escape(activeWordChar) + '"]');
-    setActiveWordCard(newCard || null);
+  // シートを開いたまま声調123／声調カーブ／日本字体の表示設定が変わったとき用。
+  // renderCurrentMode()が内部でシートを閉じてしまうので、呼び出し側で閉じる直前の文字を
+  // 覚えておいて渡してもらい、新しい表示設定のカードを探して同じ文字でシートを開き直す。
+  // 閉じてすぐ開き直すため、同一のJS実行内であれば見た目のアニメーションは発生しない。
+  function reopenWordSheetIfNeeded(ch) {
+    if (!ch) return;
+    const card = kanjiGrid.querySelector('.kcard[data-char="' + CSS.escape(ch) + '"]');
+    openWordSheetFor(ch, card);
   }
   // カードでもシート自身でも表示切り替えボタンでもない場所をタップしたら閉じる
   document.addEventListener('click', (e) => {
@@ -1781,6 +1782,7 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
   }
 
   toneToggle.addEventListener('click', () => {
+    const reopenChar = wordSheet.classList.contains('open') ? activeWordChar : null;
     if (state.contourOn) {
       // 記号モード中に押した場合は、記号モードを抜けて数字モードへ切り替える
       state.contourOn = false;
@@ -1794,25 +1796,27 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
     toneToggle.setAttribute('aria-pressed', state.toneType === 'num' ? 'true' : 'false');
     renderCurrentMode();
     refreshWordbookIfOpen();
-    refreshWordSheetIfOpen();
+    reopenWordSheetIfNeeded(reopenChar);
   });
 
   contourToggle.addEventListener('click', () => {
+    const reopenChar = wordSheet.classList.contains('open') ? activeWordChar : null;
     state.contourOn = !state.contourOn;
     contourToggle.classList.toggle('active', state.contourOn);
     contourToggle.setAttribute('aria-pressed', state.contourOn ? 'true' : 'false');
     renderCurrentMode();
     refreshWordbookIfOpen();
-    refreshWordSheetIfOpen();
+    reopenWordSheetIfNeeded(reopenChar);
   });
 
   jaKanjiToggle.addEventListener('click', () => {
+    const reopenChar = wordSheet.classList.contains('open') ? activeWordChar : null;
     state.jaKanjiOn = !state.jaKanjiOn;
     jaKanjiToggle.classList.toggle('active', state.jaKanjiOn);
     jaKanjiToggle.setAttribute('aria-pressed', state.jaKanjiOn ? 'true' : 'false');
     renderCurrentMode();
     refreshWordbookIfOpen();
-    refreshWordSheetIfOpen();
+    reopenWordSheetIfNeeded(reopenChar);
   });
 
   focusToggle.addEventListener('click', () => {
