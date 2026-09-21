@@ -606,16 +606,31 @@
   }
   #wordbookHeaderActions{ display:flex; align-items:center; gap:2px; flex:0 0 auto; }
   #wordSelectCount{ font-size:12px; color:var(--paper-dim); margin-right:2px; white-space:nowrap; }
-  #wordSelectToggleBtn{ width:auto; height:auto; flex-direction:column; gap:1px; padding:3px 4px 2px; }
+  #wordSelectToggleBtn{ width:auto; height:auto; flex-direction:column; gap:1px; padding:6px 10px; flex:0 0 auto; }
   #wordSelectToggleBtn.active{ color:var(--seal); }
-  #wordSortToggle{ width:auto; height:auto; flex-direction:column; gap:1px; padding:3px 4px 2px; }
   .iconBtnLabel{ font-size:9px; font-weight:600; line-height:1; letter-spacing:0.2px; }
+  #wordSortBar{
+    flex:0 0 auto;
+    display:flex; gap:6px;
+    padding:10px 16px 0;
+  }
+  .wordSortBtn{
+    flex:1 1 0;
+    background:var(--ink-soft); color:var(--paper-dim);
+    border:1px solid var(--line); border-radius:8px;
+    padding:8px 4px;
+    font-size:13px; font-weight:700; text-align:center;
+  }
+  .wordSortBtn.active{ background:var(--seal-soft); border-color:var(--seal); color:var(--paper); }
+  .wordSortBtn:active{ background:var(--line); }
   #wordAddBar{
     flex:0 0 auto;
+    display:flex; align-items:center; gap:8px;
     padding:10px 16px 6px;
   }
   #wordAddInput{
-    width:100%; background:var(--input-bg); color:var(--input-text);
+    flex:1 1 auto; min-width:0;
+    background:var(--input-bg); color:var(--input-text);
     border:none; border-radius:10px; padding:11px 12px;
     font-size:15px; font-family:inherit;
   }
@@ -635,7 +650,17 @@
   }
   .wordChip.selected{ border-color:var(--seal); background:var(--seal-soft); }
   .wordChipHz{ font-size:20px; font-weight:600; color:var(--paper); letter-spacing:1px; }
-  .wordChipPy{ font-size:19px; font-weight:600; color:var(--seal); letter-spacing:0.2px; }
+  /* 声調123／記号表記を切り替えても縦幅が動かないよう高さを固定し、1行に収まる幅まで
+     JS(fitWordChipPy)が自動で文字サイズを縮める。それでも収まらなければ省略記号で切る。 */
+  .wordChipPy{
+    width:100%;
+    height:24px;
+    display:flex; align-items:center; justify-content:center;
+    overflow:hidden;
+    white-space:nowrap;
+    text-overflow:ellipsis;
+    font-size:19px; font-weight:600; color:var(--seal); letter-spacing:0.2px;
+  }
   .wordChip.selected .wordChipPy{ color:var(--paper); }
   .wordChipContourRow{ justify-content:center; row-gap:2px; }
   .wordChipContourRow .cChar{ font-size:20px; }
@@ -944,18 +969,19 @@
         <button id="wordDeleteBtn" class="iconBtn" type="button" aria-label="削除" title="削除" hidden disabled>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path></svg>
         </button>
-        <button id="wordSortToggle" class="iconBtn" type="button" aria-label="並び替え" title="並び替え（タップで切り替え）">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="6" x2="14" y2="6"></line><line x1="4" y1="12" x2="11" y2="12"></line><line x1="4" y1="18" x2="8" y2="18"></line><path d="M17 4v16"></path><polyline points="13 8 17 4 21 8"></polyline></svg>
-          <span class="iconBtnLabel" id="wordSortLabel">登録順</span>
-        </button>
-        <button id="wordSelectToggleBtn" class="iconBtn" type="button" aria-label="選択" title="選択">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"></rect><polyline points="8 12 11 15 16 9"></polyline></svg>
-          <span class="iconBtnLabel">選択</span>
-        </button>
       </div>
     </header>
+    <div id="wordSortBar">
+      <button class="wordSortBtn" type="button" data-sort="registered">登録順</button>
+      <button class="wordSortBtn" type="button" data-sort="pinyin">ピンイン順</button>
+      <button class="wordSortBtn" type="button" data-sort="tone">声調順</button>
+    </div>
     <div id="wordAddBar">
       <input id="wordAddInput" type="text" placeholder="単語を入力してEnterで登録（4文字まで）" maxlength="12" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="done" />
+      <button id="wordSelectToggleBtn" class="iconBtn" type="button" aria-label="選択" title="選択">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"></rect><polyline points="8 12 11 15 16 9"></polyline></svg>
+        <span class="iconBtnLabel">選択</span>
+      </button>
     </div>
     <div id="wordGrid"></div>
   </div>
@@ -1077,8 +1103,7 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
   const wordSelectCount = document.getElementById('wordSelectCount');
   const wordAddInput = document.getElementById('wordAddInput');
   const wordGrid = document.getElementById('wordGrid');
-  const wordSortToggle = document.getElementById('wordSortToggle');
-  const wordSortLabel = document.getElementById('wordSortLabel');
+  const wordSortBtns = Array.from(document.querySelectorAll('.wordSortBtn'));
 
   const allKanjiScreen = document.getElementById('allKanjiScreen');
   const allKanjiMenuBtn = document.getElementById('allKanjiMenuBtn');
@@ -1278,20 +1303,38 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
     if (ra.length !== rb.length) return ra.length - rb.length;
     return a < b ? -1 : a > b ? 1 : 0;
   }
-  // 声調順：軽声(0)は5扱いで最後に回す。文字数が短い単語から先に並べ、
+  // 声調順：漢字1文字だけを切り出して調べると「一」「不」のような変調や、重ね言葉の軽声が
+  // 元の（変化前の）声調のまま拾われてしまう。単語全体をピンイン変換してから声調を拾うことで、
+  // その単語として実際に読まれる声調（変調・軽声を含む）で比較する。
+  function getWordToneDigits(word) {
+    if (!pp || !pp.segment) return Array.from(word).map(() => '');
+    let groups = [];
+    try {
+      groups = pp.segment(word, { format: pp.OutputFormat.AllArray, toneType: 'num' });
+    } catch (e) { groups = []; }
+    const chars = groups.length
+      ? groups.reduce((acc, g) => acc.concat(g), [])
+      : Array.from(word).map((c) => ({ result: c }));
+    return chars.map(({ result }) => {
+      const m = /([0-5])$/.exec(result || '');
+      return m ? m[1] : '';
+    });
+  }
+  // 軽声(0)は5扱いで最後に回す。文字数が短い単語から先に並べ、
   // 同じ声調の組み合わせ（例：1声+2声）の中はピンイン順にする
-  function toneRankDigit(ch) {
-    const d = getToneDigit(ch);
-    if (d === '' ) return 9;
-    if (d === '0') return 5;
-    return Number(d);
+  function toneRanksForWord(word) {
+    return getWordToneDigits(word).map((d) => {
+      if (d === '') return 9;
+      if (d === '0') return 5;
+      return Number(d);
+    });
   }
   function compareToneWords(a, b) {
     const la = Array.from(a).length;
     const lb = Array.from(b).length;
     if (la !== lb) return la - lb;
-    const ta = Array.from(a).map(toneRankDigit);
-    const tb = Array.from(b).map(toneRankDigit);
+    const ta = toneRanksForWord(a);
+    const tb = toneRanksForWord(b);
     for (let i = 0; i < ta.length; i++) {
       if (ta[i] !== tb[i]) return ta[i] - tb[i];
     }
@@ -1299,10 +1342,12 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
   }
   const WORD_SORT_KEY = 'pinyinHelperWordSort_v1';
   const WORD_SORT_MODES = ['registered', 'pinyin', 'tone'];
-  const WORD_SORT_LABELS = { registered: '登録順', pinyin: 'ピンイン順', tone: '声調順' };
   let wordSortMode = WORD_SORT_MODES.indexOf(localStorage.getItem(WORD_SORT_KEY)) >= 0
     ? localStorage.getItem(WORD_SORT_KEY) : 'registered';
-  if (wordSortLabel) wordSortLabel.textContent = WORD_SORT_LABELS[wordSortMode];
+  function updateWordSortBtnsUI() {
+    wordSortBtns.forEach((btn) => btn.classList.toggle('active', btn.dataset.sort === wordSortMode));
+  }
+  updateWordSortBtnsUI();
   function getSortedWords() {
     const list = savedWords.slice();
     if (wordSortMode === 'pinyin') list.sort(comparePinyinWords);
@@ -3085,6 +3130,27 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
 
       wordGrid.appendChild(chip);
     });
+
+    fitAllWordChipPy();
+  }
+
+  // 声調123／記号表記を切り替えても行の高さが動かないよう、ピンインが1行に収まるまで
+  // 文字サイズを少しずつ縮める（最小サイズでも収まらなければCSSの省略記号に任せる）。
+  // 描画直後はまだ画面が非表示のことがあるので、確実に幅が測れるよう次フレームで実行する。
+  function fitWordChipPy(el) {
+    el.style.fontSize = '';
+    const maxWidth = el.clientWidth;
+    if (!maxWidth) return;
+    let fontSize = 19;
+    while (el.scrollWidth > maxWidth + 0.5 && fontSize > 12) {
+      fontSize -= 1;
+      el.style.fontSize = fontSize + 'px';
+    }
+  }
+  function fitAllWordChipPy() {
+    requestAnimationFrame(() => {
+      wordGrid.querySelectorAll('.wordChipPy').forEach(fitWordChipPy);
+    });
   }
 
   function openWordbookScreen() {
@@ -3151,12 +3217,14 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
     renderWordGrid();
   });
 
-  wordSortToggle.addEventListener('click', () => {
-    const idx = WORD_SORT_MODES.indexOf(wordSortMode);
-    wordSortMode = WORD_SORT_MODES[(idx + 1) % WORD_SORT_MODES.length];
-    try { localStorage.setItem(WORD_SORT_KEY, wordSortMode); } catch (e) { /* noop */ }
-    wordSortLabel.textContent = WORD_SORT_LABELS[wordSortMode];
-    renderWordGrid();
+  wordSortBtns.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      if (btn.dataset.sort === wordSortMode) return;
+      wordSortMode = btn.dataset.sort;
+      try { localStorage.setItem(WORD_SORT_KEY, wordSortMode); } catch (e) { /* noop */ }
+      updateWordSortBtnsUI();
+      renderWordGrid();
+    });
   });
 
   wordDeleteBtn.addEventListener('click', () => {
