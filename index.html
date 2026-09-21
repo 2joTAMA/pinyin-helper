@@ -694,8 +694,14 @@
     font-size:15px; font-family:inherit;
   }
   #allKanjiAddInput:focus{ outline:2px solid var(--seal); }
+  #allKanjiBody{
+    flex:1 1 auto;
+    min-height:0;
+    display:flex;
+  }
   #allKanjiGrid{
     flex:1 1 auto;
+    min-width:0;
     overflow-y:auto;
     -webkit-overflow-scrolling:touch;
     padding:6px 16px calc(16px + var(--footer-total-h));
@@ -704,6 +710,24 @@
   .khz.noWord{ color:var(--paper-dim); }
   /* グレーの中でも少し青みを残し、日本字体に変換済みの字だけは区別できるようにする */
   .khz.noWord .jaChanged{ color:var(--ja-accent-dim); }
+
+  /* ---------- 全漢字画面：右端の子音インデックス（iOSの設定アプリ一覧のような目次） ---------- */
+  #allKanjiIndex{
+    flex:0 0 auto;
+    width:22px;
+    display:flex; flex-direction:column; align-items:center; justify-content:space-between;
+    padding:6px 4px calc(6px + var(--footer-total-h));
+    -webkit-user-select:none; user-select:none;
+    touch-action:none;
+  }
+  .allKanjiIndexItem{
+    font-size:9px; font-weight:700; line-height:1;
+    color:var(--paper-dim);
+    padding:2px 3px;
+    border-radius:4px;
+    text-transform:uppercase;
+  }
+  .allKanjiIndexItem.active{ background:var(--seal-soft); color:var(--paper); }
 
   /* ---------- saved list: search + folders ---------- */
   #listSearchBar{
@@ -1001,7 +1025,10 @@
     <div id="allKanjiAddBar">
       <input id="allKanjiAddInput" type="text" placeholder="文字を入力してEnterで漢字を登録" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="done" />
     </div>
-    <div id="allKanjiGrid"></div>
+    <div id="allKanjiBody">
+      <div id="allKanjiGrid"></div>
+      <div id="allKanjiIndex"></div>
+    </div>
   </div>
 
   <div id="folderPicker" class="modalOverlay" hidden>
@@ -1113,6 +1140,7 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
   const allKanjiMenuBtn = document.getElementById('allKanjiMenuBtn');
   const allKanjiAddInput = document.getElementById('allKanjiAddInput');
   const allKanjiGrid = document.getElementById('allKanjiGrid');
+  const allKanjiIndex = document.getElementById('allKanjiIndex');
 
   const folderPicker = document.getElementById('folderPicker');
   const folderPickerList = document.getElementById('folderPickerList');
@@ -1738,8 +1766,12 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
 
   // ================= 全漢字ページ =================
   // 登録済みの漢字を常にピンインでグループ化して表示する（グループ内は登録順のまま）。
+  // 子音インデックス（右端の目次）でジャンプする先の見出しがない“無子音”の音（ā/ān等）用のラベル
+  const ALL_KANJI_INDEX_NO_INITIAL_LABEL = '·';
+
   function renderAllKanjiGrid() {
     allKanjiGrid.innerHTML = '';
+    allKanjiIndex.innerHTML = '';
     if (!allKanji.length) {
       allKanjiGrid.innerHTML = '<div class="listEmpty">まだ漢字が登録されていません</div>';
       return;
@@ -1754,9 +1786,14 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
 
     const orderedKeys = Array.from(groups.keys()).sort(compareGroupKeys);
     const frag = document.createDocumentFragment();
+    const indexFrag = document.createDocumentFragment();
+    let lastInitial = null;
     orderedKeys.forEach((key) => {
+      const initial = splitPinyinBase(key).initial;
+
       const wrap = document.createElement('div');
       wrap.className = 'kgroup';
+      wrap.dataset.initial = initial;
 
       const label = document.createElement('div');
       label.className = 'kgroupLabel';
@@ -1769,9 +1806,51 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
       wrap.appendChild(row);
 
       frag.appendChild(wrap);
+
+      // 同じ子音が続く間はインデックスに1つだけ出す（グループの先頭に飛べればよい）
+      if (initial !== lastInitial) {
+        lastInitial = initial;
+        const item = document.createElement('div');
+        item.className = 'allKanjiIndexItem';
+        item.dataset.initial = initial;
+        item.textContent = initial || ALL_KANJI_INDEX_NO_INITIAL_LABEL;
+        indexFrag.appendChild(item);
+      }
     });
     allKanjiGrid.appendChild(frag);
+    allKanjiIndex.appendChild(indexFrag);
   }
+
+  // 全漢字ページの右端インデックスをタップ／ドラッグして、その子音の先頭グループへジャンプする
+  function jumpAllKanjiToInitial(initial) {
+    const target = allKanjiGrid.querySelector('.kgroup[data-initial="' + CSS.escape(initial) + '"]');
+    if (target) target.scrollIntoView({ block: 'start' });
+  }
+  function allKanjiIndexItemAt(x, y) {
+    const el = document.elementFromPoint(x, y);
+    return el ? el.closest('.allKanjiIndexItem') : null;
+  }
+  let allKanjiIndexActiveEl = null;
+  function setAllKanjiIndexActive(item) {
+    if (allKanjiIndexActiveEl && allKanjiIndexActiveEl !== item) allKanjiIndexActiveEl.classList.remove('active');
+    allKanjiIndexActiveEl = item || null;
+    if (allKanjiIndexActiveEl) allKanjiIndexActiveEl.classList.add('active');
+  }
+  allKanjiIndex.addEventListener('click', (e) => {
+    const item = e.target.closest('.allKanjiIndexItem');
+    if (item) jumpAllKanjiToInitial(item.dataset.initial);
+  });
+  allKanjiIndex.addEventListener('touchstart', (e) => {
+    const item = allKanjiIndexItemAt(e.touches[0].clientX, e.touches[0].clientY);
+    if (item) { jumpAllKanjiToInitial(item.dataset.initial); setAllKanjiIndexActive(item); }
+  }, { passive: true });
+  allKanjiIndex.addEventListener('touchmove', (e) => {
+    const item = allKanjiIndexItemAt(e.touches[0].clientX, e.touches[0].clientY);
+    if (item && item !== allKanjiIndexActiveEl) { jumpAllKanjiToInitial(item.dataset.initial); setAllKanjiIndexActive(item); }
+    e.preventDefault();
+  }, { passive: false });
+  allKanjiIndex.addEventListener('touchend', () => setAllKanjiIndexActive(null));
+  allKanjiIndex.addEventListener('touchcancel', () => setAllKanjiIndexActive(null));
 
   function updateKanjiToolbarUI(charCount, isGroupedView) {
     groupBtnLabel.textContent = isGroupedView ? '再グループ化' : 'グループ分け';
