@@ -2103,6 +2103,7 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
   let savedWords = loadWords(); // 新しく登録した単語が先頭
 
   // 簡体字化して先頭4文字（漢字のみ）に丸め、既に登録済みなら何もしない（重複自動排除）
+  // ここに含まれる漢字は、全漢字ページ未登録のものだけ自動で登録する（通知なし）
   function addWord(raw) {
     const simplified = normalizeToSimplified(raw || '');
     const chars = Array.from(simplified).filter((ch) => HANZI_RE.test(ch)).slice(0, 4);
@@ -2110,6 +2111,7 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
     if (!word || savedWords.indexOf(word) >= 0) return false;
     savedWords.unshift(word);
     persistWords();
+    addAllKanji(word);
     return true;
   }
   function deleteWords(words) {
