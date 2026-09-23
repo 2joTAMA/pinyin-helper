@@ -580,7 +580,7 @@
   .listEditBtn svg{ width:13px; height:13px; display:block; }
   .listEditBtn:active{ color:var(--seal); }
 
-  /* 長押しでファイル行を掴んで並び替え */
+  /* 長押しでファイル行・フォルダ行を掴んで並び替え */
   .listRowWrap.armed .listRow{ transform:scale(0.97); transition:transform .12s ease; }
   .listRowWrap.rowDragging{
     position:fixed; z-index:85;
@@ -655,7 +655,7 @@
     padding:10px 16px calc(16px + var(--footer-total-h));
     align-content:start;
   }
-  /* ピンイン順のときだけ、行頭子音ごとの見出しを2列分の幅いっぱいに挟む */
+  /* ピンイン順／声調順のときだけ、グループ見出しを2列分の幅いっぱいに挟む */
   .wordGroupLabel{
     grid-column:1 / -1;
     font-size:13px; font-weight:700; color:var(--seal);
@@ -696,7 +696,7 @@
   .wordChipContourRow .cChar{ font-size:20px; }
   .wordChipContourRow .cTone{ width:17px; height:12px; }
 
-  /* ---------- 単語帳：右端の子音インデックス（ピンイン順のときだけ表示） ---------- */
+  /* ---------- 単語帳：右端のグループインデックス（ピンイン順／声調順のときだけ表示） ---------- */
   #wordbookIndex{
     flex:0 0 auto;
     width:22px;
@@ -1402,24 +1402,30 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
       return m ? m[1] : '';
     });
   }
-  // 軽声(0)は5扱いで最後に回す。文字数が短い単語から先に並べ、
-  // 同じ声調の組み合わせ（例：1声+2声）の中はピンイン順にする
-  function toneRanksForWord(word) {
-    return getWordToneDigits(word).map((d) => {
-      if (d === '') return 9;
-      if (d === '0') return 5;
-      return Number(d);
-    });
+  // 声調順：1文字目・2文字目の声調の組み合わせ（例：1声+2声）でグループ化して並べる。
+  // 3文字以上の単語も先頭2文字の声調だけで判定する。同じ組み合わせの中はピンイン順。
+  // pinyin-proは軽声を末尾「0」（まれに「5」）で表すので、どちらも同じ「0」として扱う。
+  const TONE_GROUP_ORDER = ['1', '2', '3', '4', '0'];
+  const TONE_GROUP_NAME = { '1': '1声', '2': '2声', '3': '3声', '4': '4声', '0': '軽声' };
+  function normalizeToneDigit(d) {
+    return d === '5' ? '0' : d;
+  }
+  function toneGroupRank(digit) {
+    const idx = TONE_GROUP_ORDER.indexOf(digit);
+    return idx >= 0 ? idx : TONE_GROUP_ORDER.length;
+  }
+  // 1文字だけの単語は2文字目の声調が存在しないので''のまま返す（呼び出し側で個別に扱う）
+  function wordToneGroupDigits(word) {
+    const digits = getWordToneDigits(word).map(normalizeToneDigit);
+    return [digits[0] || '', digits[1] || ''];
   }
   function compareToneWords(a, b) {
-    const la = Array.from(a).length;
-    const lb = Array.from(b).length;
-    if (la !== lb) return la - lb;
-    const ta = toneRanksForWord(a);
-    const tb = toneRanksForWord(b);
-    for (let i = 0; i < ta.length; i++) {
-      if (ta[i] !== tb[i]) return ta[i] - tb[i];
-    }
+    const [a1, a2] = wordToneGroupDigits(a);
+    const [b1, b2] = wordToneGroupDigits(b);
+    const r1 = toneGroupRank(a1) - toneGroupRank(b1);
+    if (r1 !== 0) return r1;
+    const r2 = toneGroupRank(a2) - toneGroupRank(b2);
+    if (r2 !== 0) return r2;
     return comparePinyinWords(a, b);
   }
   const WORD_SORT_KEY = 'pinyinHelperWordSort_v1';
@@ -2648,8 +2654,6 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
     listRows.appendChild(newFolderBtn);
 
     folders
-      .slice()
-      .sort((a, b) => a.name.localeCompare(b.name, 'ja'))
       .forEach((folder) => {
         listRows.appendChild(makeFolderRow(folder));
         if (!expandedFolders.has(folder.id)) return;
@@ -2808,10 +2812,10 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
       e.stopPropagation();
       const n = fileCountInFolder(folder.id);
       const msg = n
-        ? 'フォルダ「' + folder.name + '」を削除します。\n中の' + n + '件は「フォルダなし」に移動します。'
+        ? 'フォルダ「' + folder.name + '」を削除します。\n中の' + n + '件も一緒に削除されます。'
         : 'フォルダ「' + folder.name + '」を削除しますか？';
       if (!window.confirm(msg)) return;
-      savedFiles.forEach((f) => { if (f.folderId === folder.id) f.folderId = null; });
+      savedFiles = savedFiles.filter((f) => f.folderId !== folder.id);
       folders = folders.filter((x) => x.id !== folder.id);
       expandedFolders.delete(folder.id);
       persistFolders();
@@ -2825,6 +2829,7 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
 
     const row = document.createElement('div');
     row.className = 'listRow folderRow';
+    row.dataset.folderId = folder.id;
 
     const name = document.createElement('span');
     name.className = 'listTitle';
@@ -2844,61 +2849,39 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
     row.appendChild(name);
     row.appendChild(meta);
 
-    row.addEventListener('click', () => {
-      if (row.classList.contains('swiped')) {
-        row.classList.remove('swiped');
-        row.style.transform = '';
-        return;
-      }
+    wrap.appendChild(actions);
+    wrap.appendChild(row);
+    attachFileRowGestures(wrap, row, () => {
       if (expandedFolders.has(folder.id)) expandedFolders.delete(folder.id);
       else expandedFolders.add(folder.id);
       renderListRows();
+    }, true, {
+      actionW: 128,
+      attr: 'folderId',
+      commit: commitFolderOrderFromDom,
+      // 展開中に並び替えを始めたら、中身(.folderBody)を置き去りにしないよう先に畳む
+      onDragStart: () => {
+        if (!expandedFolders.has(folder.id)) return;
+        expandedFolders.delete(folder.id);
+        wrap.classList.remove('expanded');
+        const body = wrap.nextSibling;
+        if (body && body.classList && body.classList.contains('folderBody')) body.remove();
+      },
     });
-
-    wrap.appendChild(actions);
-    wrap.appendChild(row);
-    attachSwipe(row, 128);
     return wrap;
   }
 
-  function attachSwipe(row, width) {
-    const w = width || 64;
-    let startX = 0, startY = 0, currentX = 0;
-    let dragging = false, axisLocked = false, horizontal = false;
-    row.addEventListener('pointerdown', (e) => {
-      startX = e.clientX; startY = e.clientY;
-      currentX = 0; dragging = true; axisLocked = false; horizontal = false;
-      row.style.transition = 'none';
-    });
-    row.addEventListener('pointermove', (e) => {
-      if (!dragging) return;
-      const dx = e.clientX - startX;
-      const dy = e.clientY - startY;
-      if (!axisLocked && Math.abs(dx) + Math.abs(dy) > 8) {
-        axisLocked = true;
-        horizontal = Math.abs(dx) > Math.abs(dy);
-      }
-      if (!horizontal) return;
-      currentX = Math.min(0, Math.max(-w, dx));
-      row.style.transform = 'translateX(' + currentX + 'px)';
-    });
-    function endDrag() {
-      if (!dragging) return;
-      dragging = false;
-      row.style.transition = '';
-      const open = currentX < -(w / 3);
-      row.style.transform = open ? 'translateX(-' + w + 'px)' : '';
-      row.classList.toggle('swiped', open);
-    }
-    row.addEventListener('pointerup', endDrag);
-    row.addEventListener('pointercancel', endDrag);
-  }
-
-  // ファイル行のジェスチャ：タップで開く／左スワイプでアクション表示／長押しで並び替え
-  function attachFileRowGestures(wrap, row, onOpen, enableReorder) {
-    const ACTION_W = 192; // 移動・複製・削除の3ボタン分（64px × 3）
+  // 行のジェスチャ：タップで開く／左スワイプでアクション表示／長押しで並び替え
+  // ファイル行・フォルダ行の両方で使う共通実装。opts.attrで対象行の判別用データ属性
+  // （'fileId'→data-file-id、'folderId'→data-folder-id）を切り替え、その種類の行同士でだけ
+  // 並び替えが完結するようにする（opts省略時はファイル行向けの既定値で動く）。
+  function attachFileRowGestures(wrap, row, onOpen, enableReorder, opts) {
+    const ACTION_W = (opts && opts.actionW) || 192; // 移動・複製・削除の3ボタン分（64px × 3）
     const HOLD_MS = 380;
     const MOVE_CANCEL = 10;
+    const itemAttr = (opts && opts.attr) || 'fileId';
+    const itemSelector = '.listRow[data-' + itemAttr.replace(/[A-Z]/g, (m) => '-' + m.toLowerCase()) + ']';
+    const commitOrder = (opts && opts.commit) || commitOrderFromDom;
 
     let startX = 0, startY = 0, grabX = 0, grabY = 0, lastY = 0;
     let pointerId = null;
@@ -3000,6 +2983,9 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
       row.style.transition = '';
       row.style.transform = '';
       if (navigator.vibrate) { try { navigator.vibrate(12); } catch (err) { /* noop */ } }
+      // フォルダ行の場合、展開中の中身（.folderBody）を置き去りにしないよう
+      // 並び替え開始時に呼び出し側で先に畳んでもらう
+      if (opts && opts.onDragStart) opts.onDragStart();
 
       // 並び替えは今いる枠（ルート直下 or 展開中のフォルダの中）の中だけで完結させる
       dragScope = wrap.parentNode;
@@ -3026,7 +3012,7 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
     function fileWraps() {
       return Array.prototype.filter.call(
         dragScope.querySelectorAll('.listRowWrap'),
-        (w) => w !== wrap && w.querySelector('.listRow[data-file-id]')
+        (w) => w !== wrap && w.querySelector(itemSelector)
       );
     }
     function updatePlaceholder(y) {
@@ -3066,7 +3052,7 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
       wrap.style.width = wrap.style.left = wrap.style.top = '';
       listRows.classList.remove('isDragging');
       try { row.releasePointerCapture(pid); } catch (err) { /* noop */ }
-      commitOrderFromDom(dragScope);
+      commitOrder(dragScope);
       dragScope = null;
     }
   }
@@ -3087,6 +3073,22 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
     persistSavedFiles();
   }
 
+  // DOM 上のフォルダ行の並びを folders に反映（commitOrderFromDomのフォルダ版）
+  function commitFolderOrderFromDom(container) {
+    const scope = container || listRows;
+    const shownIds = Array.prototype.map.call(
+      scope.querySelectorAll('.listRow[data-folder-id]'),
+      (r) => r.dataset.folderId
+    );
+    if (!shownIds.length) return;
+    const shown = new Set(shownIds);
+    const byId = new Map(folders.map((f) => [f.id, f]));
+    const queue = shownIds.map((id) => byId.get(id)).filter(Boolean);
+    let qi = 0;
+    folders = folders.map((f) => (shown.has(f.id) ? queue[qi++] : f));
+    persistFolders();
+  }
+
   // ---------- フォルダ移動ピッカー ----------
   function openFolderPicker(file) {
     folderPickerList.innerHTML = '';
@@ -3102,10 +3104,7 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
     };
 
     mkItem('フォルダなし', !file.folderId, false, () => moveFileToFolder(file, null));
-    folders
-      .slice()
-      .sort((a, b) => a.name.localeCompare(b.name, 'ja'))
-      .forEach((f) => mkItem(f.name, file.folderId === f.id, false, () => moveFileToFolder(file, f.id)));
+    folders.forEach((f) => mkItem(f.name, file.folderId === f.id, false, () => moveFileToFolder(file, f.id)));
     mkItem('新規フォルダ…', false, true, async () => {
       const nm = await askName('新規フォルダ', '');
       if (!nm) return;
@@ -3231,38 +3230,53 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
     updateWordSelectUI();
   }
 
-  // 単語の先頭の漢字の子音を返す（ピンイン順のときのグループ見出し・右端インデックス用）
-  function wordGroupInitial(word) {
-    const firstChar = Array.from(word)[0] || '';
-    return splitPinyinBase(getBasePinyin(firstChar) || '').initial;
+  // 現在の並び替えモードに応じたグループ情報（見出し・右端インデックス用）を返す。
+  // 登録順のときはグループ化しない（null）。
+  function wordGroupInfo(word) {
+    if (wordSortMode === 'pinyin') {
+      const firstChar = Array.from(word)[0] || '';
+      const initial = splitPinyinBase(getBasePinyin(firstChar) || '').initial;
+      const text = initial || ALL_KANJI_INDEX_NO_INITIAL_LABEL;
+      return { key: initial, indexText: text, headerText: text };
+    }
+    if (wordSortMode === 'tone') {
+      const [t1, t2] = wordToneGroupDigits(word);
+      const key = t1 + '_' + t2;
+      const indexText = t2 ? t1 + t2 : t1;
+      const headerText = t2
+        ? (TONE_GROUP_NAME[t1] || '?') + '-' + (TONE_GROUP_NAME[t2] || '?')
+        : (TONE_GROUP_NAME[t1] || '?');
+      return { key, indexText, headerText };
+    }
+    return null;
   }
 
   function renderWordGrid() {
     wordGrid.innerHTML = '';
     wordbookIndex.innerHTML = '';
-    const grouped = wordSortMode === 'pinyin';
+    const grouped = wordSortMode !== 'registered';
     wordbookIndex.hidden = !grouped;
     if (!savedWords.length) {
       wordGrid.innerHTML = '<div class="listEmpty">まだ単語が登録されていません</div>';
       return;
     }
     const indexFrag = document.createDocumentFragment();
-    let lastInitial = null;
+    let lastGroupKey = null;
     getSortedWords().forEach((word) => {
       if (grouped) {
-        const initial = wordGroupInitial(word);
-        if (initial !== lastInitial) {
-          lastInitial = initial;
+        const info = wordGroupInfo(word);
+        if (info && info.key !== lastGroupKey) {
+          lastGroupKey = info.key;
           const label = document.createElement('div');
           label.className = 'wordGroupLabel';
-          label.dataset.initial = initial;
-          label.textContent = initial || ALL_KANJI_INDEX_NO_INITIAL_LABEL;
+          label.dataset.groupKey = info.key;
+          label.textContent = info.headerText;
           wordGrid.appendChild(label);
 
           const item = document.createElement('div');
           item.className = 'wordbookIndexItem';
-          item.dataset.initial = initial;
-          item.textContent = initial || ALL_KANJI_INDEX_NO_INITIAL_LABEL;
+          item.dataset.groupKey = info.key;
+          item.textContent = info.indexText;
           indexFrag.appendChild(item);
         }
       }
@@ -3299,10 +3313,10 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
     fitAllWordChipPy();
   }
 
-  // 単語帳の右端インデックスをタップ／ドラッグして、その子音の先頭見出しへジャンプする
+  // 単語帳の右端インデックスをタップ／ドラッグして、そのグループの先頭見出しへジャンプする
   // （全漢字ページの同機能と同じ操作感にしている）
-  function jumpWordbookToInitial(initial) {
-    const target = wordGrid.querySelector('.wordGroupLabel[data-initial="' + CSS.escape(initial) + '"]');
+  function jumpWordbookToGroup(groupKey) {
+    const target = wordGrid.querySelector('.wordGroupLabel[data-group-key="' + CSS.escape(groupKey) + '"]');
     if (target) target.scrollIntoView({ block: 'start' });
   }
   function wordbookIndexItemAt(x, y) {
@@ -3317,15 +3331,15 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
   }
   wordbookIndex.addEventListener('click', (e) => {
     const item = e.target.closest('.wordbookIndexItem');
-    if (item) jumpWordbookToInitial(item.dataset.initial);
+    if (item) jumpWordbookToGroup(item.dataset.groupKey);
   });
   wordbookIndex.addEventListener('touchstart', (e) => {
     const item = wordbookIndexItemAt(e.touches[0].clientX, e.touches[0].clientY);
-    if (item) { jumpWordbookToInitial(item.dataset.initial); setWordbookIndexActive(item); }
+    if (item) { jumpWordbookToGroup(item.dataset.groupKey); setWordbookIndexActive(item); }
   }, { passive: true });
   wordbookIndex.addEventListener('touchmove', (e) => {
     const item = wordbookIndexItemAt(e.touches[0].clientX, e.touches[0].clientY);
-    if (item && item !== wordbookIndexActiveEl) { jumpWordbookToInitial(item.dataset.initial); setWordbookIndexActive(item); }
+    if (item && item !== wordbookIndexActiveEl) { jumpWordbookToGroup(item.dataset.groupKey); setWordbookIndexActive(item); }
     e.preventDefault();
   }, { passive: false });
   wordbookIndex.addEventListener('touchend', () => setWordbookIndexActive(null));
