@@ -39,10 +39,19 @@
   }
   body{
     display:flex; flex-direction:column;
+    /* iOS のホーム画面追加（standalone）表示では100dvhが実際の画面高さより
+       小さく計算されるバグがあり、position:fixedの要素（フッター等）の下に
+       隙間ができてしまう。JS(syncAppHeight)がwindow.innerHeightを実測して
+       --app-hに入れ、それをここで優先的に使う（JS実行前は100dvhにフォールバック）。 */
     height:100dvh;
+    height:var(--app-h, 100dvh);
     overflow:hidden;
     position:relative;
     isolation:isolate;
+    /* transformを与えることでbody自身がposition:fixedな子要素の基準（containing block）になる。
+       これにより、フッターやオーバーレイ画面はOSのビューポートではなく上のheightで
+       確定させたbody自身の高さを基準に配置されるので、OS側のビューポート計算バグの影響を受けない。 */
+    transform:translateZ(0);
   }
   button{ font:inherit; -webkit-appearance:none; appearance:none; cursor:pointer; }
 
@@ -3476,6 +3485,20 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
   }, { passive: true });
   document.addEventListener('pointercancel', () => { edgeSwipeStart = null; }, { passive: true });
 
+  // ================= 画面の実高さをCSS変数へ反映 =================
+  // iOSのホーム画面追加（standalone）表示では100dvhが実際の画面高さより小さく
+  // 計算されるバグがあり、bodyの高さがOSの本当のビューポートより短くなる。
+  // bodyはtransformでposition:fixedな子要素（フッターやオーバーレイ画面）の基準に
+  // なっているので、window.innerHeight（無ければvisualViewport.height）を実測して
+  // --app-hに入れれば、フッター下に隙間ができる問題を解消できる。
+  function syncAppHeight() {
+    const h = window.innerHeight || (window.visualViewport && window.visualViewport.height) || 0;
+    if (h) document.documentElement.style.setProperty('--app-h', h + 'px');
+  }
+  window.addEventListener('resize', syncAppHeight);
+  window.addEventListener('orientationchange', syncAppHeight);
+  if (window.visualViewport) window.visualViewport.addEventListener('resize', syncAppHeight);
+
   // ================= フッター2段の実測サイズをCSS変数へ反映 =================
   // env(safe-area-inset-bottom)やbutton内のstretch挙動はブラウザ差が出やすいため、
   // calc()に頼らず実際に描画された高さを測って var(--toolfooter-h) / var(--footer-total-h) に入れる。
@@ -3499,6 +3522,7 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
   focusToggle.title = state.focusMode ? '入力欄を表示' : '入力欄を畳んで広く表示';
   autoGrow();
   renderCurrentMode();
+  syncAppHeight();
   syncFooterOffsets();
 })();
 
