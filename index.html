@@ -635,17 +635,32 @@
     font-size:15px; font-family:inherit;
   }
   #wordAddInput:focus{ outline:2px solid var(--seal); }
+  #wordbookBody{
+    flex:1 1 auto;
+    min-height:0;
+    display:flex;
+  }
   #wordGrid{
-    flex:1 1 auto; overflow-y:auto; overflow-x:hidden;
+    flex:1 1 auto; min-width:0; overflow-y:auto; overflow-x:hidden;
     display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:8px;
     padding:10px 16px calc(16px + var(--footer-total-h));
     align-content:start;
   }
+  /* ピンイン順のときだけ、行頭子音ごとの見出しを2列分の幅いっぱいに挟む */
+  .wordGroupLabel{
+    grid-column:1 / -1;
+    font-size:13px; font-weight:700; color:var(--seal);
+    letter-spacing:0.4px; text-transform:uppercase;
+    padding-top:12px; margin-top:2px;
+    border-top:1px dashed var(--line);
+  }
+  .wordGroupLabel:first-child{ padding-top:0; margin-top:0; border-top:none; }
   .wordChip{
     min-width:0;
+    min-height:68px;
     background:var(--ink-soft); border:1px solid var(--line); border-radius:10px;
     padding:7px 5px;
-    display:flex; flex-direction:column; align-items:center; gap:1px;
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px;
     text-align:center;
     -webkit-user-select:none; user-select:none;
   }
@@ -666,9 +681,30 @@
     font-size:19px; font-weight:600; color:var(--seal); letter-spacing:0.2px;
   }
   .wordChip.selected .wordChipPy{ color:var(--paper); }
+  /* 記号（声調カーブ）モードは123モードより中身の縦幅が短くなるので、.wordChipの
+     min-heightとjustify-content:centerで縦位置を揃え、切替時にカードの高さがずれないようにする */
   .wordChipContourRow{ justify-content:center; row-gap:2px; }
   .wordChipContourRow .cChar{ font-size:20px; }
   .wordChipContourRow .cTone{ width:17px; height:12px; }
+
+  /* ---------- 単語帳：右端の子音インデックス（ピンイン順のときだけ表示） ---------- */
+  #wordbookIndex{
+    flex:0 0 auto;
+    width:22px;
+    display:flex; flex-direction:column; align-items:center; justify-content:space-between;
+    padding:16px 4px calc(16px + var(--footer-total-h));
+    -webkit-user-select:none; user-select:none;
+    touch-action:none;
+  }
+  #wordbookIndex[hidden]{ display:none; }
+  .wordbookIndexItem{
+    font-size:9px; font-weight:700; line-height:1;
+    color:var(--paper-dim);
+    padding:2px 3px;
+    border-radius:4px;
+    text-transform:uppercase;
+  }
+  .wordbookIndexItem.active{ background:var(--seal-soft); color:var(--paper); }
 
   /* ---------- 全漢字画面（登録した漢字を常にピンインごとにグループ表示） ---------- */
   #allKanjiScreen{
@@ -1011,7 +1047,10 @@
         <span class="iconBtnLabel">選択</span>
       </button>
     </div>
-    <div id="wordGrid"></div>
+    <div id="wordbookBody">
+      <div id="wordGrid"></div>
+      <div id="wordbookIndex" hidden></div>
+    </div>
   </div>
 
   <div id="allKanjiScreen" hidden>
@@ -1134,6 +1173,7 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
   const wordSelectCount = document.getElementById('wordSelectCount');
   const wordAddInput = document.getElementById('wordAddInput');
   const wordGrid = document.getElementById('wordGrid');
+  const wordbookIndex = document.getElementById('wordbookIndex');
   const wordSortBtns = Array.from(document.querySelectorAll('.wordSortBtn'));
 
   const allKanjiScreen = document.getElementById('allKanjiScreen');
@@ -3182,13 +3222,42 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
     updateWordSelectUI();
   }
 
+  // 単語の先頭の漢字の子音を返す（ピンイン順のときのグループ見出し・右端インデックス用）
+  function wordGroupInitial(word) {
+    const firstChar = Array.from(word)[0] || '';
+    return splitPinyinBase(getBasePinyin(firstChar) || '').initial;
+  }
+
   function renderWordGrid() {
     wordGrid.innerHTML = '';
+    wordbookIndex.innerHTML = '';
+    const grouped = wordSortMode === 'pinyin';
+    wordbookIndex.hidden = !grouped;
     if (!savedWords.length) {
       wordGrid.innerHTML = '<div class="listEmpty">まだ単語が登録されていません</div>';
       return;
     }
+    const indexFrag = document.createDocumentFragment();
+    let lastInitial = null;
     getSortedWords().forEach((word) => {
+      if (grouped) {
+        const initial = wordGroupInitial(word);
+        if (initial !== lastInitial) {
+          lastInitial = initial;
+          const label = document.createElement('div');
+          label.className = 'wordGroupLabel';
+          label.dataset.initial = initial;
+          label.textContent = initial || ALL_KANJI_INDEX_NO_INITIAL_LABEL;
+          wordGrid.appendChild(label);
+
+          const item = document.createElement('div');
+          item.className = 'wordbookIndexItem';
+          item.dataset.initial = initial;
+          item.textContent = initial || ALL_KANJI_INDEX_NO_INITIAL_LABEL;
+          indexFrag.appendChild(item);
+        }
+      }
+
       const chip = document.createElement('div');
       chip.className = 'wordChip' + (selectedWords.has(word) ? ' selected' : '');
 
@@ -3216,9 +3285,42 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
 
       wordGrid.appendChild(chip);
     });
+    wordbookIndex.appendChild(indexFrag);
 
     fitAllWordChipPy();
   }
+
+  // 単語帳の右端インデックスをタップ／ドラッグして、その子音の先頭見出しへジャンプする
+  // （全漢字ページの同機能と同じ操作感にしている）
+  function jumpWordbookToInitial(initial) {
+    const target = wordGrid.querySelector('.wordGroupLabel[data-initial="' + CSS.escape(initial) + '"]');
+    if (target) target.scrollIntoView({ block: 'start' });
+  }
+  function wordbookIndexItemAt(x, y) {
+    const el = document.elementFromPoint(x, y);
+    return el ? el.closest('.wordbookIndexItem') : null;
+  }
+  let wordbookIndexActiveEl = null;
+  function setWordbookIndexActive(item) {
+    if (wordbookIndexActiveEl && wordbookIndexActiveEl !== item) wordbookIndexActiveEl.classList.remove('active');
+    wordbookIndexActiveEl = item || null;
+    if (wordbookIndexActiveEl) wordbookIndexActiveEl.classList.add('active');
+  }
+  wordbookIndex.addEventListener('click', (e) => {
+    const item = e.target.closest('.wordbookIndexItem');
+    if (item) jumpWordbookToInitial(item.dataset.initial);
+  });
+  wordbookIndex.addEventListener('touchstart', (e) => {
+    const item = wordbookIndexItemAt(e.touches[0].clientX, e.touches[0].clientY);
+    if (item) { jumpWordbookToInitial(item.dataset.initial); setWordbookIndexActive(item); }
+  }, { passive: true });
+  wordbookIndex.addEventListener('touchmove', (e) => {
+    const item = wordbookIndexItemAt(e.touches[0].clientX, e.touches[0].clientY);
+    if (item && item !== wordbookIndexActiveEl) { jumpWordbookToInitial(item.dataset.initial); setWordbookIndexActive(item); }
+    e.preventDefault();
+  }, { passive: false });
+  wordbookIndex.addEventListener('touchend', () => setWordbookIndexActive(null));
+  wordbookIndex.addEventListener('touchcancel', () => setWordbookIndexActive(null));
 
   // 声調123／記号表記を切り替えても行の高さが動かないよう、ピンインが1行に収まるまで
   // 文字サイズを少しずつ縮める（最小サイズでも収まらなければCSSの省略記号に任せる）。
