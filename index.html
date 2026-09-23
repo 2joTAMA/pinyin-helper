@@ -462,10 +462,10 @@
   /* 人名登録した単語の目印：ピンインの末尾に小さく人アイコンを添える */
   .wordSheetPersonIcon{
     display:inline-flex;
-    width:14px; height:14px;
+    width:21px; height:21px;
     margin-left:5px;
-    vertical-align:-2px;
-    color:var(--seal);
+    vertical-align:-4px;
+    color:#fff;
   }
   .wordSheetPersonIcon svg{ width:100%; height:100%; display:block; }
   .wordSheetItem .contourRow{ align-items:flex-end; }
@@ -684,13 +684,16 @@
     -webkit-user-select:none; user-select:none;
   }
   .wordChip.selected{ border-color:var(--seal); background:var(--seal-soft); }
-  /* 人名登録した単語の目印：文字の位置・ボックスのサイズを一切変えずに、背景にうっすら
-     人アイコンを敷く（負のz-indexで文字の下に沈める） */
+  /* 人名登録した単語の目印：文字の位置・ボックスのサイズを一切変えずに、背景を少し明るくした上に
+     黒いシルエットの人アイコンを敷く（負のz-indexで文字の下に沈める）。選択中はselectedの
+     配色を優先する */
+  .wordChip.person{ background:#4a463f; }
+  .wordChip.person.selected{ background:var(--seal-soft); }
   .wordChipPersonIcon{
     position:absolute; inset:10px;
     z-index:-1;
-    color:var(--paper);
-    opacity:0.16;
+    color:#000;
+    opacity:0.45;
     pointer-events:none;
   }
   .wordChipPersonIcon svg{ width:100%; height:100%; display:block; }
@@ -3348,10 +3351,11 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
         }
       }
 
+      const isPerson = personWords.has(word);
       const chip = document.createElement('div');
-      chip.className = 'wordChip' + (selectedWords.has(word) ? ' selected' : '');
+      chip.className = 'wordChip' + (isPerson ? ' person' : '') + (selectedWords.has(word) ? ' selected' : '');
 
-      if (personWords.has(word)) {
+      if (isPerson) {
         const badge = document.createElement('div');
         badge.className = 'wordChipPersonIcon';
         badge.innerHTML = PERSON_SVG;
