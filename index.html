@@ -105,21 +105,6 @@
   #saveBtn.justSaved{ background:var(--seal); border-color:var(--seal); color:var(--ink); }
   #saveBtn.dirty{ background:var(--warn); border-color:var(--warn); color:var(--ink); }
 
-  /* ---------- auto-title sub header ---------- */
-  #subHeader{
-    flex:0 0 auto;
-    display:flex; align-items:center; justify-content:center;
-    padding:4px 12px;
-    background:rgba(201,112,79,0.09);
-    border-bottom:1px solid var(--line);
-  }
-  #autoTitleText{
-    font-size:12px; font-weight:600; color:var(--seal);
-    letter-spacing:0.3px;
-    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
-    max-width:100%;
-  }
-
   /* ---------- mode bar ---------- */
   #modeBar{
     flex:0 0 auto;
@@ -171,7 +156,7 @@
     padding-bottom:env(safe-area-inset-bottom, 0px);
   }
   #toolFooter button{
-    flex:1 1 33.333%;
+    flex:1 1 25%;
     height:var(--footer-h);
     display:flex; align-items:center; justify-content:center; gap:4px;
     background:none; border:none;
@@ -182,6 +167,7 @@
   #toolFooter button svg{ width:18px; height:18px; display:block; }
   #toneToggle.active{ background:var(--seal); color:var(--ink); }
   #contourToggle.active{ background:var(--seal); color:var(--ink); }
+  #pinyinOffToggle.active{ background:var(--seal); color:var(--ink); }
   #jaKanjiToggle.active{ background:var(--ja-accent); color:var(--ink); }
 
   /* ---------- input ---------- */
@@ -304,7 +290,6 @@
   #doneBtn svg{ width:12px; height:12px; }
 
   body.reordering #topHeader,
-  body.reordering #subHeader,
   body.reordering #modeBar,
   body.reordering #inputWrap{
     opacity:0.32; filter:grayscale(0.4); pointer-events:none;
@@ -574,10 +559,6 @@
   }
   .listTitleWrap{ flex:1 1 auto; min-width:0; display:flex; flex-direction:column; gap:2px; }
   .listTitleWrap .listTitle{ flex:0 0 auto; }
-  .listSubtitle{
-    font-size:11px; font-weight:500; color:var(--seal);
-    white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0;
-  }
   .listMeta{ flex:0 0 auto; display:flex; align-items:center; gap:8px; }
   .listEditBtn{
     display:flex; align-items:center; justify-content:center;
@@ -719,11 +700,13 @@
     font-size:19px; font-weight:600; color:var(--seal); letter-spacing:0.2px;
   }
   .wordChip.selected .wordChipPy{ color:var(--paper); }
-  /* 記号（声調カーブ）モードは123モードより中身の縦幅が短くなるので、.wordChipの
-     min-heightとjustify-content:centerで縦位置を揃え、切替時にカードの高さがずれないようにする */
+  /* 記号（声調カーブ）モードでも、漢字の位置が123・声調記号モードとぴったり同じになるよう、
+     .wordChipHz＋gap(1px)＋.wordChipPy(24px) と同じ縦幅・横幅の組み方にそろえる。
+     漢字の行の高さ・字間は.wordChipHzと同じにし、カーブ(12px)の上下に余白を足して
+     1px+24pxぶんの高さにする（上7px＝1px+(24-12)/2、下6px）。 */
   .wordChipContourRow{ justify-content:center; row-gap:2px; }
-  .wordChipContourRow .cChar{ font-size:20px; }
-  .wordChipContourRow .cTone{ width:17px; height:12px; }
+  .wordChipContourRow .cChar{ font-size:20px; line-height:normal; letter-spacing:1px; }
+  .wordChipContourRow .cTone{ width:17px; height:12px; margin-top:7px; margin-bottom:6px; }
 
   /* ---------- 単語帳：右端のグループインデックス（ピンイン順／声調順のときだけ表示） ---------- */
   #wordbookIndex{
@@ -917,7 +900,7 @@
     </button>
     <div id="titleWrap">
       <span id="fileTitle"></span>
-      <button id="renameBtn" class="iconBtn" type="button" aria-label="サブタイトルを編集" title="サブタイトルを編集">
+      <button id="renameBtn" class="iconBtn" type="button" aria-label="タイトルを編集" title="タイトルを編集">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg>
       </button>
     </div>
@@ -929,10 +912,6 @@
       保存
     </button>
   </header>
-
-  <div id="subHeader">
-    <span id="autoTitleText"></span>
-  </div>
 
   <div id="modeBar">
     <div class="tabs">
@@ -1004,6 +983,9 @@
     <button id="contourToggle" type="button" aria-pressed="false" title="声調を高低カーブの記号で表示（アルファベット非表示）">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 17 L9 7 L15 7 L20 17"></path></svg>
     </button>
+    <button id="pinyinOffToggle" type="button" aria-pressed="false" title="ピンインを表示しない">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><line x1="5.6" y1="5.6" x2="18.4" y2="18.4"></line></svg>
+    </button>
     <button id="jaKanjiToggle" type="button" aria-pressed="false" title="漢字を日本の字体で表示（内部のデータは変わりません）">日</button>
   </div>
 
@@ -1015,14 +997,14 @@
   <div id="saveModal" class="modalOverlay" hidden>
     <div class="modalCard">
       <div class="modalTitle" id="modalHeading">保存</div>
-      <div class="modalLabel">サブタイトル（任意）</div>
+      <div class="modalLabel">タイトル（任意）</div>
       <div class="modalInputWrap">
         <input id="modalTitleInput" class="modalInput" type="text" autocomplete="off" />
         <button id="modalClearBtn" class="modalClearBtn" type="button" title="クリア" aria-label="クリア">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="5" y1="5" x2="19" y2="19"></line><line x1="19" y1="5" x2="5" y2="19"></line></svg>
         </button>
       </div>
-      <div class="modalHint">タイトルは内容から自動でつきます。空欄でも保存できます</div>
+      <div class="modalHint">空欄のときは、冒頭の文字から自動でタイトルがつきます</div>
       <div class="modalActions">
         <button id="modalCancelBtn" class="modalBtnGhost" type="button">キャンセル</button>
         <button id="modalSaveBtn" class="modalBtnPrimary" type="button">保存する</button>
@@ -1164,11 +1146,11 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
   const saveBtn = document.getElementById('saveBtn');
   const fileTitle = document.getElementById('fileTitle');
   const renameBtn = document.getElementById('renameBtn');
-  const autoTitleText = document.getElementById('autoTitleText');
 
   const tabBtns = document.querySelectorAll('.tabBtn');
   const toneToggle = document.getElementById('toneToggle');
   const contourToggle = document.getElementById('contourToggle');
+  const pinyinOffToggle = document.getElementById('pinyinOffToggle');
   const jaKanjiToggle = document.getElementById('jaKanjiToggle');
   const focusToggle = document.getElementById('focusToggle');
 
@@ -1292,7 +1274,7 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
     '于', '黄', '猫', '内', '累', '里',
     '范', '吊', '凛',
     '晒', '蚕', '惨', '残', '参', '誉', '欲', '余',
-    '雇',
+    '雇', '晴',
   ]);
   // 簡体字1字に新字体・旧字体など複数の候補があり、逆引きがたまたま違う方（主に旧字体）を
   // 選んでしまっているケース。気づいたものはここで正しい新字体を指定して上書きする。
@@ -1318,10 +1300,15 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
     '价': '価', '劝': '勧', '摄': '摂', '转': '転',
     '烧': '焼', '赞': '賛', '脏': '臓',
     '岁': '歳', '儿': '児',
+    '济': '済', '纵': '縦',
+    // 右側が「靑」の晴（異体字）。日本の字体では普通の「晴」になる
+    '暒': '晴',
   };
   function toJapaneseKanji(text) {
     let out = '';
-    for (const ch of text) {
+    for (const raw of text) {
+      // 「晴」(U+FA12)のような互換漢字は見た目が旧字体でも中身は同じ字なので、先に通常の字(U+6674など)へ正規化する
+      const ch = raw.normalize('NFC');
       if (JA_KANJI_PREFERRED[ch]) out += JA_KANJI_PREFERRED[ch];
       else if (JA_KANJI_NO_CONVERT.has(ch)) out += ch;
       else out += JA_KANJI_MAP[ch] || ch;
@@ -1354,8 +1341,9 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
     mode: 'sentence',      // 'sentence' | 'kanji'
     toneType: 'symbol',    // 'symbol' | 'num' (どちらか一方のみ表示。併記はしない)
     contourOn: false,      // true のときはアルファベットを隠し、声調を高低カーブのSVG記号で表示する
+    pinyinOff: false,      // true のときはピンインも声調カーブも一切表示しない（contourOnとは同時にtrueにならない）
     reordering: false,
-    focusMode: true,
+    focusMode: false,
     groupedView: false,    // 単漢字モードでグループ分け済みかどうか（グループが1つだけでも true になりうる）
     jaKanjiOn: false,      // true のときは漢字の表示だけ日本の字体に変換する（内部データ・ピンイン計算には影響しない）
   };
@@ -1465,10 +1453,8 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
     if (r2 !== 0) return r2;
     return comparePinyinWords(a, b);
   }
-  const WORD_SORT_KEY = 'pinyinHelperWordSort_v1';
-  const WORD_SORT_MODES = ['registered', 'pinyin', 'tone'];
-  let wordSortMode = WORD_SORT_MODES.indexOf(localStorage.getItem(WORD_SORT_KEY)) >= 0
-    ? localStorage.getItem(WORD_SORT_KEY) : 'registered';
+  // アプリを開いたときは常に登録順から始める（前回の並び順は引き継がない）
+  let wordSortMode = 'registered';
   function updateWordSortBtnsUI() {
     wordSortBtns.forEach((btn) => btn.classList.toggle('active', btn.dataset.sort === wordSortMode));
   }
@@ -1657,6 +1643,17 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
 
       const normalized = normalizeToSimplified(line);
 
+      if (state.pinyinOff) {
+        const block = document.createElement('div');
+        block.className = 'lineBlock';
+        const zhDiv = document.createElement('div');
+        zhDiv.className = 'zhLine';
+        renderDisplayText(zhDiv, normalized);
+        block.appendChild(zhDiv);
+        frag.appendChild(block);
+        return;
+      }
+
       if (state.contourOn) {
         frag.appendChild(buildContourBlock(normalized));
         return;
@@ -1727,7 +1724,7 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
     } else {
       const tone = document.createElement('span');
       tone.className = 'ktone';
-      tone.textContent = state.toneType === 'num' ? getToneDigit(ch) : '';
+      tone.textContent = (state.toneType === 'num' && !state.pinyinOff) ? getToneDigit(ch) : '';
       card.appendChild(tone);
     }
 
@@ -1768,7 +1765,7 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
         renderDisplayText(hz, w);
         const py = document.createElement('div');
         py.className = 'wordSheetPy';
-        py.textContent = lineToPinyin(w);
+        py.textContent = state.pinyinOff ? '' : lineToPinyin(w);
         if (personWords.has(w)) {
           const icon = document.createElement('span');
           icon.className = 'wordSheetPersonIcon';
@@ -2116,54 +2113,63 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
     if (!allKanjiScreen.hidden) renderAllKanjiGrid();
   }
 
-  toneToggle.addEventListener('click', () => {
+  function setToggleActive(btn, on) {
+    btn.classList.toggle('active', on);
+    btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+  }
+  // 下段フッターのボタンの点灯状態を今のstateに合わせる。
+  // ピンインなしモード中は123の設定（toneType）は覚えたまま、ボタンだけ消灯する
+  function updateToolFooterUI() {
+    setToggleActive(toneToggle, state.toneType === 'num' && !state.pinyinOff);
+    setToggleActive(contourToggle, state.contourOn);
+    setToggleActive(pinyinOffToggle, state.pinyinOff);
+    setToggleActive(jaKanjiToggle, state.jaKanjiOn);
+  }
+  // 表示設定を変えたあと、開いている画面・単語シートをすべて描き直す
+  function applyDisplaySettingChange(fn) {
     const reopenChar = wordSheet.classList.contains('open') ? activeWordChar : null;
-    if (state.contourOn) {
-      // 記号モード中に押した場合は、記号モードを抜けて数字モードへ切り替える
+    fn();
+    updateToolFooterUI();
+    renderCurrentMode(!!reopenChar);
+    refreshWordbookIfOpen();
+    refreshAllKanjiIfOpen();
+    reopenWordSheetIfNeeded(reopenChar);
+  }
+
+  toneToggle.addEventListener('click', () => applyDisplaySettingChange(() => {
+    if (state.contourOn || state.pinyinOff) {
+      // 記号モード／ピンインなしモード中に押した場合は、そのモードを抜けて数字モードへ切り替える
       state.contourOn = false;
-      contourToggle.classList.remove('active');
-      contourToggle.setAttribute('aria-pressed', 'false');
+      state.pinyinOff = false;
       state.toneType = 'num';
     } else {
       state.toneType = state.toneType === 'symbol' ? 'num' : 'symbol';
     }
-    toneToggle.classList.toggle('active', state.toneType === 'num');
-    toneToggle.setAttribute('aria-pressed', state.toneType === 'num' ? 'true' : 'false');
-    renderCurrentMode(!!reopenChar);
-    refreshWordbookIfOpen();
-    refreshAllKanjiIfOpen();
-    reopenWordSheetIfNeeded(reopenChar);
-  });
+  }));
 
-  contourToggle.addEventListener('click', () => {
-    const reopenChar = wordSheet.classList.contains('open') ? activeWordChar : null;
+  contourToggle.addEventListener('click', () => applyDisplaySettingChange(() => {
+    state.pinyinOff = false;
     state.contourOn = !state.contourOn;
-    contourToggle.classList.toggle('active', state.contourOn);
-    contourToggle.setAttribute('aria-pressed', state.contourOn ? 'true' : 'false');
-    renderCurrentMode(!!reopenChar);
-    refreshWordbookIfOpen();
-    refreshAllKanjiIfOpen();
-    reopenWordSheetIfNeeded(reopenChar);
-  });
+  }));
 
-  jaKanjiToggle.addEventListener('click', () => {
-    const reopenChar = wordSheet.classList.contains('open') ? activeWordChar : null;
+  pinyinOffToggle.addEventListener('click', () => applyDisplaySettingChange(() => {
+    state.pinyinOff = !state.pinyinOff;
+    if (state.pinyinOff) state.contourOn = false;
+  }));
+
+  jaKanjiToggle.addEventListener('click', () => applyDisplaySettingChange(() => {
     state.jaKanjiOn = !state.jaKanjiOn;
-    jaKanjiToggle.classList.toggle('active', state.jaKanjiOn);
-    jaKanjiToggle.setAttribute('aria-pressed', state.jaKanjiOn ? 'true' : 'false');
-    renderCurrentMode(!!reopenChar);
-    refreshWordbookIfOpen();
-    refreshAllKanjiIfOpen();
-    reopenWordSheetIfNeeded(reopenChar);
-  });
+  }));
 
-  focusToggle.addEventListener('click', () => {
-    state.focusMode = !state.focusMode;
-    document.body.classList.toggle('focusMode', state.focusMode);
-    focusToggle.classList.toggle('active', state.focusMode);
-    focusToggle.setAttribute('aria-pressed', state.focusMode ? 'true' : 'false');
-    focusToggle.title = state.focusMode ? '入力欄を表示' : '入力欄を畳んで広く表示';
-  });
+  // 入力欄を畳む(true)／開く(false)
+  function setFocusMode(on) {
+    state.focusMode = on;
+    document.body.classList.toggle('focusMode', on);
+    focusToggle.classList.toggle('active', on);
+    focusToggle.setAttribute('aria-pressed', on ? 'true' : 'false');
+    focusToggle.title = on ? '入力欄を表示' : '入力欄を畳んで広く表示';
+  }
+  focusToggle.addEventListener('click', () => setFocusMode(!state.focusMode));
 
   // ================= 描画の切替 =================
   // keepWordSheet=trueのときは単語シートを閉じない（声調123／声調カーブ／日本字体の
@@ -2173,7 +2179,6 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
     const trimmed = input.value ? input.value.trim() : '';
     updateSurume(trimmed !== '');
     clearBtn.classList.toggle('show', input.value.length > 0);
-    updateAutoTitleDisplay();
     updateSaveBtnDirtyState();
 
     if (state.mode === 'sentence') {
@@ -2228,17 +2233,27 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
   }
   let savedFiles = loadSavedFiles();
 
-  // 旧形式（title が自由記述のタイトルだった）からの移行：
-  // 旧タイトルはサブタイトルへ回し、タイトルは内容から自動生成し直す
-  (function migrateTitlesToAutoTitle() {
+  // タイトルは手動入力の1種類だけ（空欄で保存したときだけ冒頭の文字から自動でつける）。
+  // 「自動タイトル＋手動サブタイトル」だった時期の保存データは、サブタイトルが入力されていれば
+  // それをタイトルにし、空ならその時点の自動タイトルをそのまま残して、subtitleの項目を消す。
+  // subtitleが無いデータ（それ以前の、タイトルが手入力だった時期のものも含む）はtitleをそのまま使う。
+  function migrateFileTitle(f) {
     let changed = false;
-    savedFiles.forEach((f) => {
-      if (typeof f.subtitle !== 'string') {
-        f.subtitle = f.title || '';
-        f.title = computeAutoTitle(f.mode, f.text || '');
-        changed = true;
-      }
-    });
+    if ('subtitle' in f) {
+      const sub = typeof f.subtitle === 'string' ? f.subtitle.trim() : '';
+      if (sub) f.title = sub;
+      delete f.subtitle;
+      changed = true;
+    }
+    if (!f.title || !String(f.title).trim()) {
+      f.title = computeAutoTitle(f.mode, f.text || '');
+      changed = true;
+    }
+    return changed;
+  }
+  (function migrateTitlesToSingleTitle() {
+    let changed = false;
+    savedFiles.forEach((f) => { if (migrateFileTitle(f)) changed = true; });
     if (changed) persistSavedFiles();
   })();
 
@@ -2400,10 +2415,7 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
     let addedCount = 0;
     importedFiles.forEach((f) => {
       if (f && f.id && !existingFileIds.has(f.id)) {
-        if (typeof f.subtitle !== 'string') {
-          f.subtitle = f.title || '';
-          f.title = computeAutoTitle(f.mode, f.text || '');
-        }
+        migrateFileTitle(f);
         savedFiles.push(f);
         existingFileIds.add(f.id);
         addedCount += 1;
@@ -2481,7 +2493,6 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
     const query = q.trim();
     if (!query) return true;
     if ((file.title || '').toLowerCase().indexOf(query.toLowerCase()) >= 0) return true;
-    if ((file.subtitle || '').toLowerCase().indexOf(query.toLowerCase()) >= 0) return true;
     const text = normalizeToSimplified(file.text || '');
     if (text.indexOf(query) >= 0) return true;
     const hanziChars = [];
@@ -2503,12 +2514,13 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
   // 人名バッジ用の塗りつぶしバストアップアイコン（単語帳の背景透かし・全漢字ページの人名マーク共用）
   const PERSON_SVG = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"></path></svg>';
 
-  // サブタイトル（自由記述）を1行目ヘッダーに表示
-  function setSubtitleDisplay(subtitle) {
-    fileTitle.textContent = subtitle || '';
+  // 開いているファイルのタイトルをヘッダーに表示（未保存の新規ファイルは空）
+  function setTitleDisplay(title) {
+    fileTitle.textContent = title || '';
   }
 
-  // 文章モードの自動タイトル：先頭の文字を適度な文字数だけ抽出
+  // 保存時にタイトルが空欄だったときに使う自動タイトル
+  // 文章モード：先頭の文字を適度な文字数だけ抽出
   function defaultTitleFromText(text) {
     const flat = text.replace(/\s+/g, '').trim();
     if (!flat) return '無題';
@@ -2533,11 +2545,6 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
   // モードに応じた自動タイトルを算出する
   function computeAutoTitle(mode, text) {
     return mode === 'kanji' ? kanjiAutoTitle(text) : defaultTitleFromText(text);
-  }
-
-  // 2行目ヘッダーの自動タイトルを、現在の入力内容から更新する
-  function updateAutoTitleDisplay() {
-    autoTitleText.textContent = computeAutoTitle(state.mode, input.value);
   }
 
   function flashSaved() {
@@ -2566,10 +2573,10 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
 
   function openSaveModal(ctx) {
     modalContext = ctx;
-    modalHeading.textContent = ctx.mode === 'rename' ? 'サブタイトルを編集' : '保存';
+    modalHeading.textContent = ctx.mode === 'rename' ? 'タイトルを編集' : '保存';
     if (ctx.mode === 'rename') {
       const f = savedFiles.find((x) => x.id === ctx.fileId);
-      modalTitleInput.value = f ? (f.subtitle || '') : '';
+      modalTitleInput.value = f ? (f.title || '') : '';
     } else {
       modalTitleInput.value = '';
     }
@@ -2590,7 +2597,6 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
     if (idx < 0) return;
     savedFiles[idx].text = input.value;
     savedFiles[idx].mode = state.mode;
-    savedFiles[idx].title = computeAutoTitle(state.mode, input.value);
     savedFiles[idx].updatedAt = Date.now();
     persistSavedFiles();
   }
@@ -2605,7 +2611,6 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
     if (currentFileId) {
       saveExistingFile();
       flashSaved();
-      updateAutoTitleDisplay();
       updateSaveBtnDirtyState();
     } else {
       openSaveModal({ mode: 'new' });
@@ -2631,22 +2636,25 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
 
   modalSaveBtn.addEventListener('click', () => {
     if (!modalContext) return;
-    const subtitle = modalTitleInput.value.trim();
+    const typedTitle = modalTitleInput.value.trim();
 
     if (modalContext.mode === 'rename') {
       const idx = savedFiles.findIndex((f) => f.id === modalContext.fileId);
+      let title = typedTitle;
       if (idx >= 0) {
-        savedFiles[idx].subtitle = subtitle;
+        // 空欄にしたときは、そのファイルの中身から自動タイトルをつけ直す
+        if (!title) title = computeAutoTitle(savedFiles[idx].mode, savedFiles[idx].text || '');
+        savedFiles[idx].title = title;
         persistSavedFiles();
       }
-      if (modalContext.fileId === currentFileId) setSubtitleDisplay(subtitle);
+      if (modalContext.fileId === currentFileId) setTitleDisplay(title);
       if (listScreen.classList.contains('open')) renderListRows();
     } else {
       if (state.mode === 'kanji') performGrouping(); // 保存時は自動で再グループ化する
+      const title = typedTitle || computeAutoTitle(state.mode, input.value);
       const file = {
         id: 'f' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8),
-        title: computeAutoTitle(state.mode, input.value),
-        subtitle: subtitle,
+        title: title,
         mode: state.mode,
         text: input.value,
         folderId: null, // アコーディオン化により「今開いているフォルダ」という概念がないため常にルートへ保存
@@ -2655,8 +2663,7 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
       savedFiles.unshift(file); // 新規保存は一覧の先頭へ。以降は手動の並び順を保持
       persistSavedFiles();
       currentFileId = file.id;
-      setSubtitleDisplay(subtitle);
-      updateAutoTitleDisplay();
+      setTitleDisplay(title);
       updateSaveBtnDirtyState();
     }
     closeSaveModal();
@@ -2820,13 +2827,6 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
     title.textContent = file.title;
     titleWrap.appendChild(title);
 
-    if (file.subtitle) {
-      const subtitle = document.createElement('span');
-      subtitle.className = 'listSubtitle';
-      subtitle.textContent = file.subtitle;
-      titleWrap.appendChild(subtitle);
-    }
-
     const meta = document.createElement('span');
     meta.className = 'listMeta';
 
@@ -2841,8 +2841,8 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
     editBtn.type = 'button';
     editBtn.className = 'listEditBtn';
     editBtn.innerHTML = PENCIL_SVG;
-    editBtn.setAttribute('aria-label', 'サブタイトルを編集');
-    editBtn.title = 'サブタイトルを編集';
+    editBtn.setAttribute('aria-label', 'タイトルを編集');
+    editBtn.title = 'タイトルを編集';
     // editBtnはrow内部の子要素なので、rowのタップ判定（ファイルを開く）に巻き込まれないようpointerdown段階で止める
     editBtn.addEventListener('pointerdown', (e) => e.stopPropagation());
     editBtn.addEventListener('click', (e) => {
@@ -3237,7 +3237,9 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
 
   function loadFile(file) {
     currentFileId = file.id;
-    setSubtitleDisplay(file.subtitle);
+    setTitleDisplay(file.title);
+    // 保存済みのファイルは読むために開くことが多いので、入力欄は畳んで広く見せる
+    setFocusMode(true);
     state.mode = file.mode || 'sentence';
     updateModeTabsUI();
     commitInputValue(file.text || '', { skipUndo: true });
@@ -3254,7 +3256,8 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
 
   function startNewFile() {
     currentFileId = null;
-    setSubtitleDisplay('');
+    setTitleDisplay('');
+    setFocusMode(false);
     commitInputValue('', { skipUndo: true });
     undoStack = [];
     undoBtn.disabled = true;
@@ -3378,7 +3381,8 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
 
         const py = document.createElement('div');
         py.className = 'wordChipPy';
-        py.textContent = lineToPinyin(word);
+        // ピンインなしモードでも枠（高さ24px固定）は残して、カードの高さ・漢字の位置を変えない
+        py.textContent = state.pinyinOff ? '' : lineToPinyin(word);
         chip.appendChild(py);
       }
 
@@ -3448,14 +3452,15 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
     });
   }
 
-  function openWordbookScreen() {
+  // skipFocus=trueのときは入力欄にフォーカスしない（起動直後にキーボードが勝手に出ないようにする）
+  function openWordbookScreen(skipFocus) {
     closeAllKanjiScreen();
     closeWordSheet();
     exitWordSelectMode();
     wordAddInput.value = '';
     renderWordGrid();
     wordbookScreen.hidden = false;
-    setTimeout(() => wordAddInput.focus(), 0);
+    if (skipFocus !== true) setTimeout(() => wordAddInput.focus(), 0);
   }
   function closeWordbookScreen() {
     wordbookScreen.hidden = true;
@@ -3473,9 +3478,11 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
     allKanjiScreen.hidden = true;
   }
 
-  modeFooterWordbookBtn.addEventListener('click', openWordbookScreen);
+  modeFooterWordbookBtn.addEventListener('click', () => openWordbookScreen());
   modeFooterAllKanjiBtn.addEventListener('click', openAllKanjiScreen);
   modeFooterInputBtn.addEventListener('click', () => {
+    // 何も入力されていない状態で入力モードに移ったときは、すぐ書けるよう入力欄を開く
+    if (!input.value.trim()) setFocusMode(false);
     closeWordbookScreen();
     closeAllKanjiScreen();
     closeListScreen();
@@ -3516,7 +3523,6 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
     btn.addEventListener('click', () => {
       if (btn.dataset.sort === wordSortMode) return;
       wordSortMode = btn.dataset.sort;
-      try { localStorage.setItem(WORD_SORT_KEY, wordSortMode); } catch (e) { /* noop */ }
       updateWordSortBtnsUI();
       renderWordGrid();
     });
@@ -3626,14 +3632,13 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
 
   // ================= 起動 =================
   lastCommittedValue = input.value;
-  setSubtitleDisplay('');
+  setTitleDisplay('');
   updateModeTabsUI();
-  document.body.classList.toggle('focusMode', state.focusMode);
-  focusToggle.classList.toggle('active', state.focusMode);
-  focusToggle.setAttribute('aria-pressed', state.focusMode ? 'true' : 'false');
-  focusToggle.title = state.focusMode ? '入力欄を表示' : '入力欄を畳んで広く表示';
+  setFocusMode(state.focusMode);
   autoGrow();
   renderCurrentMode();
+  // アプリを開いたときは単語帳ページから始める
+  openWordbookScreen(true);
   syncAppHeight();
   syncFooterOffsets();
 })();
