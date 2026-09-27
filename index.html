@@ -1780,6 +1780,7 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
   // 単語帳にその漢字を含む単語が1つもないときはタップしても何も起きないので、少し薄い色で示す。
   // opts.base/opts.tone（全漢字ページ用）：多音字をどの読みとして表示しているか。
   // 指定時は声調表示をその読みの声調にし、タップで出す単語もその読みのものだけに絞る。
+  // opts.alwaysShowTone：123ボタンがOFFでも声調数字を表示する（全漢字ページの各声調の先頭用）。
   function makeCard(ch, mismatch, opts) {
     const base = (opts && opts.base) || '';
     const toneDigit = opts && opts.tone != null ? opts.tone : getToneDigit(ch);
@@ -1802,7 +1803,8 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
     } else {
       const tone = document.createElement('span');
       tone.className = 'ktone';
-      tone.textContent = (state.toneType === 'num' && !state.pinyinOff) ? toneDigit : '';
+      const showTone = (state.toneType === 'num' && !state.pinyinOff) || (opts && opts.alwaysShowTone);
+      tone.textContent = showTone ? toneDigit : '';
       card.appendChild(tone);
     }
 
@@ -1988,7 +1990,12 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
 
       const row = document.createElement('div');
       row.className = 'kgroupRow';
-      groups.get(key).forEach(({ ch, tone }) => row.appendChild(makeCard(ch, false, { base: key, tone })));
+      // 同じ声調の並びの先頭の漢字だけは、123ボタンの状態に関係なく声調数字を常に出す
+      let prevTone = null;
+      groups.get(key).forEach(({ ch, tone }) => {
+        row.appendChild(makeCard(ch, false, { base: key, tone, alwaysShowTone: tone !== prevTone }));
+        prevTone = tone;
+      });
       wrap.appendChild(row);
 
       frag.appendChild(wrap);
