@@ -753,22 +753,27 @@ main{
 .floatRoundBtn svg{ width:18px; height:18px; display:block; }
 
 /* ---------- 単語帳：右端のグループインデックス（ピンイン順／声調順のときだけ表示） ---------- */
+/* 全漢字の目次と同じく、上ぞろえで1項目あたり23px。入りきらないときは各項目が縮んで収まる */
 #wordbookIndex{
   flex:0 0 auto;
   width:22px;
-  display:flex; flex-direction:column; align-items:center; justify-content:space-between;
+  display:flex; flex-direction:column; align-items:center; justify-content:flex-start;
   padding:calc(var(--top-h, 0px) + 16px) 4px calc(16px + var(--footer-total-h));
   -webkit-user-select:none; user-select:none;
   touch-action:none;
 }
 #wordbookIndex[hidden]{ display:none; }
 .wordbookIndexItem{
+  flex:0 1 23px; min-height:13px;
+  display:flex; align-items:center;
   font-size:9px; font-weight:700; line-height:1;
   color:var(--paper-dim);
-  padding:2px 3px;
+  padding:0 3px;
   border-radius:4px;
   text-transform:uppercase;
 }
+/* 今見ている場所のグループ */
+.wordbookIndexItem.current{ color:var(--seal); }
 .wordbookIndexItem.active{ background:var(--seal-soft); color:var(--paper); }
 
 /* ---------- 全漢字画面（登録した漢字を常にピンインごとにグループ表示） ---------- */
@@ -788,21 +793,26 @@ main{
 .khz.noWord .jaChanged{ color:var(--ja-accent-dim); }
 
 /* ---------- 全漢字画面：右端の子音インデックス（iOSの設定アプリ一覧のような目次） ---------- */
+/* 上ぞろえで、1項目あたり23pxの間隔で並べる。画面が低くて入りきらないときは各項目が縮んで収まる */
 #allKanjiIndex{
   flex:0 0 auto;
   width:22px;
-  display:flex; flex-direction:column; align-items:center; justify-content:space-between;
+  display:flex; flex-direction:column; align-items:center; justify-content:flex-start;
   padding:calc(var(--top-h, 0px) + 6px) 4px calc(6px + var(--footer-total-h));
   -webkit-user-select:none; user-select:none;
   touch-action:none;
 }
 .allKanjiIndexItem{
+  flex:0 1 23px; min-height:13px;
+  display:flex; align-items:center;
   font-size:9px; font-weight:700; line-height:1;
   color:var(--paper-dim);
-  padding:2px 3px;
+  padding:0 3px;
   border-radius:4px;
   text-transform:uppercase;
 }
+/* 今見ている場所の子音 */
+.allKanjiIndexItem.current{ color:var(--seal); }
 .allKanjiIndexItem.active{ background:var(--seal-soft); color:var(--paper); }
 
 /* ---------- saved list: search + folders ---------- */

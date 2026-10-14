@@ -1069,7 +1069,62 @@
     });
     allKanjiGrid.appendChild(frag);
     allKanjiIndex.appendChild(indexFrag);
+    allKanjiIndexHighlighter.refresh();
   }
+
+  // ================= 右端の目次で「今見ている場所」の文字に色を付ける（全漢字・単語帳で共用） =================
+  // 各グループの上端の位置は描画後に一度だけ測って覚えておき、スクロールのたびにはその数値と比べるだけにする
+  // （スクロール中にレイアウトを測り直さないので軽い）。描き直し・上部の高さの変化・画面サイズの変化で測り直す。
+  // opts: screen（ページ）, grid（スクロールする一覧）, index（目次）, groupSelector（グループの要素）,
+  //       key（グループと目次の項目を対応づけるdata属性。dataset上の名前）
+  function createIndexHighlighter(opts) {
+    let tops = null;      // [{ key, top }]（上から順。一覧の中での位置）
+    let currentKey;       // 今色を付けている項目
+    let ticking = false;
+    function measure() {
+      const gridTop = opts.grid.getBoundingClientRect().top - opts.grid.scrollTop;
+      tops = Array.prototype.map.call(opts.grid.querySelectorAll(opts.groupSelector), (g) => ({
+        key: g.dataset[opts.key],
+        top: g.getBoundingClientRect().top - gridTop,
+      }));
+    }
+    function update() {
+      ticking = false;
+      if (opts.screen.hidden || opts.index.hidden) return;
+      if (!tops) measure();
+      if (!tops.length) return;
+      // 上部（すりガラスのヘッダー）のすぐ下の線より上から始まっている、一番下のグループ＝今見ているグループ
+      const line = opts.grid.scrollTop + (parseFloat(getComputedStyle(opts.grid).scrollPaddingTop) || 0) + 8;
+      let lo = 0, hi = tops.length - 1, found = 0;
+      while (lo <= hi) {
+        const mid = (lo + hi) >> 1;
+        if (tops[mid].top <= line) { found = mid; lo = mid + 1; } else { hi = mid - 1; }
+      }
+      const key = tops[found].key;
+      if (key === currentKey) return;
+      currentKey = key;
+      Array.prototype.forEach.call(opts.index.children, (item) => {
+        item.classList.toggle('current', item.dataset[opts.key] === key);
+      });
+    }
+    opts.grid.addEventListener('scroll', () => {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(update);
+    }, { passive: true });
+    window.addEventListener('resize', () => { tops = null; });
+    return {
+      // 一覧を描き直したときや、位置が変わったときに呼ぶ
+      refresh() {
+        tops = null;
+        currentKey = undefined;
+        requestAnimationFrame(update);
+      },
+    };
+  }
+  const allKanjiIndexHighlighter = createIndexHighlighter({
+    screen: allKanjiScreen, grid: allKanjiGrid, index: allKanjiIndex, groupSelector: '.kgroup', key: 'initial',
+  });
 
   // scrollerの中のelが、上部（すりガラスのヘッダー）のすぐ下に来るようにscrollerだけをスクロールする。
   // scrollIntoViewはページ全体（html）まで動かしてしまい、画面ごと上にずれることがあるので使わない
@@ -2368,9 +2423,13 @@
       chipParent.appendChild(chip);
     });
     wordbookIndex.appendChild(indexFrag);
+    wordbookIndexHighlighter.refresh();
 
     fitAllWordChipPy();
   }
+  const wordbookIndexHighlighter = createIndexHighlighter({
+    screen: wordbookScreen, grid: wordGrid, index: wordbookIndex, groupSelector: '.wordGroup', key: 'groupKey',
+  });
 
   // 単語帳の右端インデックスをタップ／ドラッグして、そのグループの先頭見出しへジャンプする
   // （全漢字ページの同機能と同じ操作感にしている）
@@ -2584,7 +2643,12 @@
   // ページごとに --top-h に入れ、スクロール領域の上余白にする。入力欄の高さが変わったときも追従する
   document.querySelectorAll('.pageTop').forEach((top) => {
     const host = top.parentElement;
-    const update = () => host.style.setProperty('--top-h', top.offsetHeight + 'px');
+    const update = () => {
+      host.style.setProperty('--top-h', top.offsetHeight + 'px');
+      // 全漢字・単語帳は目次の色付けのためにグループの位置を覚えているので、上部の高さが変わったら測り直す
+      if (host === allKanjiScreen) allKanjiIndexHighlighter.refresh();
+      if (host === wordbookScreen) wordbookIndexHighlighter.refresh();
+    };
     if (window.ResizeObserver) new ResizeObserver(update).observe(top);
     update();
   });
