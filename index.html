@@ -1069,10 +1069,17 @@
     allKanjiIndex.appendChild(indexFrag);
   }
 
+  // scrollerの中のelが、上部（すりガラスのヘッダー）のすぐ下に来るようにscrollerだけをスクロールする。
+  // scrollIntoViewはページ全体（html）まで動かしてしまい、画面ごと上にずれることがあるので使わない
+  function scrollChildToTop(scroller, el) {
+    const topH = parseFloat(getComputedStyle(scroller).scrollPaddingTop) || 0;
+    scroller.scrollTop += el.getBoundingClientRect().top - scroller.getBoundingClientRect().top - topH;
+  }
+
   // 全漢字ページの右端インデックスをタップ／ドラッグして、その子音の先頭グループへジャンプする
   function jumpAllKanjiToInitial(initial) {
     const target = allKanjiGrid.querySelector('.kgroup[data-initial="' + CSS.escape(initial) + '"]');
-    if (target) target.scrollIntoView({ block: 'start' });
+    if (target) scrollChildToTop(allKanjiGrid, target);
   }
   function allKanjiIndexItemAt(x, y) {
     const el = document.elementFromPoint(x, y);
@@ -2294,16 +2301,25 @@
     }
     const indexFrag = document.createDocumentFragment();
     let lastGroupKey = null;
+    // カードを入れる先。ピンイン順／声調順のときはグループ（見出し＋カードの並び）ごとに分ける。
+    // グループごとにまとめておくと、見出しがそのグループの間だけ上に固定され、次のグループの見出しに押し上げられる
+    let chipParent = wordGrid;
     getSortedWords().forEach((word) => {
       if (grouped) {
         const info = wordGroupInfo(word);
         if (info && info.key !== lastGroupKey) {
           lastGroupKey = info.key;
+          const section = document.createElement('section');
+          section.className = 'wordGroup';
+          section.dataset.groupKey = info.key;
           const label = document.createElement('div');
           label.className = 'wordGroupLabel';
-          label.dataset.groupKey = info.key;
           label.textContent = info.headerText;
-          wordGrid.appendChild(label);
+          section.appendChild(label);
+          chipParent = document.createElement('div');
+          chipParent.className = 'wordGroupGrid';
+          section.appendChild(chipParent);
+          wordGrid.appendChild(section);
 
           const item = document.createElement('div');
           item.className = 'wordbookIndexItem';
@@ -2347,7 +2363,7 @@
         updateWordSelectUI();
       });
 
-      wordGrid.appendChild(chip);
+      chipParent.appendChild(chip);
     });
     wordbookIndex.appendChild(indexFrag);
 
@@ -2357,8 +2373,8 @@
   // 単語帳の右端インデックスをタップ／ドラッグして、そのグループの先頭見出しへジャンプする
   // （全漢字ページの同機能と同じ操作感にしている）
   function jumpWordbookToGroup(groupKey) {
-    const target = wordGrid.querySelector('.wordGroupLabel[data-group-key="' + CSS.escape(groupKey) + '"]');
-    if (target) target.scrollIntoView({ block: 'start' });
+    const target = wordGrid.querySelector('.wordGroup[data-group-key="' + CSS.escape(groupKey) + '"]');
+    if (target) scrollChildToTop(wordGrid, target);
   }
   function wordbookIndexItemAt(x, y) {
     const el = document.elementFromPoint(x, y);
