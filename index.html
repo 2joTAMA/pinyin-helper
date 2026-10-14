@@ -7,6 +7,8 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="拼音帮手">
 <link rel="apple-touch-icon" href="images/apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#3b3833">
 <title>拼音帮手</title>
 <style>
   :root{
@@ -3760,6 +3762,11 @@
   openWordbookScreen(true);
   syncAppHeight();
   syncFooterOffsets();
+
+  // オフラインでも起動できるよう、アプリのファイルを端末に保存するService Worker（sw.js）を登録する
+  if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+    navigator.serviceWorker.register('sw.js').catch(() => { /* noop */ });
+  }
 })();
 
 </script>

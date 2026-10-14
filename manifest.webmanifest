@@ -1,0 +1,13 @@
+{
+  "name": "拼音帮手",
+  "short_name": "拼音帮手",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#32302b",
+  "theme_color": "#3b3833",
+  "lang": "ja",
+  "icons": [
+    { "src": "images/apple-touch-icon.png", "sizes": "180x180", "type": "image/png" }
+  ]
+}

@@ -12,6 +12,8 @@
 | `data/char-freq.js` | 漢字の出現頻度順 `CHAR_FREQ_ORDER`（全漢字ページの並び順に使う） |
 | `data/custom-words.js` | 読み・軽声を補正するカスタム辞書 `CUSTOM_WORDS` |
 | `images/` | ホーム画面アイコンと背景画像 |
+| `sw.js` | Service Worker。アプリのファイルを端末に保存して、オフラインでも起動できるようにする（ファイルを増減したら中の `PRECACHE_URLS` と `CACHE_NAME` を更新する） |
+| `manifest.webmanifest` | アプリ名・アイコン・全画面表示の設定 |
 
 ## 公開方法（GitHub Pages）
 
