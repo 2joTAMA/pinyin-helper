@@ -28,14 +28,23 @@
     --ja-accent-dim:#7e93a1;
     /* 画面下端からタブバー上端までの高さ。起動時にJS(syncFooterOffsets)が実測値で上書きする。ここでの値は読み込み直後の暫定値 */
     --footer-total-h:80px;
+    /* 漢字の書体。同じ文字コードでも書体によって字形が違う（敏・偏など）ので、中国語の字形の書体を優先する。
+       「日本漢字」表示のときだけ日本語の書体に切り替える（body.jaKanjiOn）。ボタンなどの日本語の文字は --font-ui のまま */
+    --font-ui:"Hiragino Sans","PingFang SC","Microsoft YaHei","Noto Sans CJK SC",sans-serif;
+    --font-zh:"PingFang SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans CJK SC","Source Han Sans SC",sans-serif;
+    --font-ja:"Hiragino Sans","Hiragino Kaku Gothic ProN","Yu Gothic","Meiryo","Noto Sans CJK JP",sans-serif;
+    --font-hanzi:var(--font-zh);
   }
+  body.jaKanjiOn{ --font-hanzi:var(--font-ja); }
+  /* 漢字を表示する部分（入力欄は日本漢字表示でも中身は簡体字のままなので、常に中国語の書体） */
+  .zhLine, .cChar, .khz, .wordChipHz, .wordSheetHz{ font-family:var(--font-hanzi); }
   *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
   [hidden]{ display:none !important; }
   html,body{
     margin:0; padding:0; height:100%;
     background:var(--ink);
     color:var(--paper);
-    font-family:"Hiragino Sans","PingFang SC","Microsoft YaHei","Noto Sans CJK SC",sans-serif;
+    font-family:var(--font-ui);
   }
   body{
     display:flex; flex-direction:column;
@@ -95,7 +104,9 @@
   }
   .dispToggle svg{ width:15px; height:15px; display:block; flex:0 0 auto; }
   .dispToggle.active{ background:var(--seal); border-color:var(--seal); color:var(--ink); }
-  .dispToggle[data-toggle="ja"].active{ background:var(--ja-accent); border-color:var(--ja-accent); }
+  /* 「日本漢字」はピンインの表示切り替えとは性格が違うので、押していないときも薄い水色にして区別する */
+  .dispToggle[data-toggle="ja"]{ background:rgba(147,209,242,0.14); border-color:rgba(147,209,242,0.35); color:var(--ja-accent); }
+  .dispToggle[data-toggle="ja"].active{ background:var(--ja-accent); border-color:var(--ja-accent); color:var(--ink); }
 
   /* ---------- 入力ページの2段目：ファイル名（左）と新規・保存（右） ---------- */
   #fileBar{
@@ -204,7 +215,7 @@
     padding:9px 60px 9px 11px;
     font-size:17px;
     line-height:1.4;
-    font-family:"Hiragino Sans","PingFang SC","Microsoft YaHei","Noto Sans CJK SC",sans-serif;
+    font-family:var(--font-zh);
     display:block;
     overflow-y:auto;
     transition:max-height .25s ease, min-height .25s ease, opacity .2s ease, padding .25s ease;
@@ -270,8 +281,9 @@
     border-bottom:1px dashed var(--line);
   }
   .lineBlock:last-child{ border-bottom:none; }
+  /* 入力で改行が2回以上続いた（空行をはさんだ）ところは、普通の改行より少し広くあける（何行空いても同じ幅） */
+  .lineBlock.afterBlank{ margin-top:14px; }
   .zhLine{
-    font-family:"Hiragino Sans","PingFang SC","Microsoft YaHei","Noto Sans CJK SC",sans-serif;
     font-size:23px;
     line-height:1.45;
     color:var(--paper);
@@ -389,6 +401,8 @@
   .wordSheetItem{ display:flex; align-items:baseline; gap:12px; }
   .wordSheetHz{ font-size:22px; font-weight:700; color:var(--paper); letter-spacing:1px; }
   .wordSheetPy{ font-size:19px; font-weight:600; color:var(--seal); letter-spacing:0.2px; }
+  /* タップした漢字が、カードの声調とは違う声調で読まれている音節（例：1声の「分」を開いたときの 分外 の fèn） */
+  .toneDiff{ text-decoration:underline; text-decoration-thickness:2px; text-underline-offset:4px; }
   /* 人名登録した単語の目印：ピンインの末尾に小さく人アイコンを添える */
   .wordSheetPersonIcon{
     display:inline-flex;
@@ -709,32 +723,6 @@
   .allKanjiIndexItem.active{ background:var(--seal-soft); color:var(--paper); }
 
   /* ---------- saved list: search + folders ---------- */
-  #listSearchBar{
-    flex:0 0 auto;
-    display:flex; align-items:center; gap:8px;
-    margin:8px 16px 4px;
-    padding:8px 10px;
-    background:var(--input-bg);
-    border-radius:8px;
-    color:var(--input-text);
-  }
-  #listSearchBar > svg{ width:15px; height:15px; flex:0 0 auto; opacity:0.7; }
-  #listSearchInput{
-    flex:1 1 auto; min-width:0;
-    background:transparent; border:none; outline:none;
-    -webkit-appearance:none; appearance:none;
-    color:var(--input-text);
-    font-size:16px; font-family:inherit;
-  }
-  #listSearchInput::placeholder{ color:rgba(42,38,32,0.5); }
-  #listSearchInput::-webkit-search-cancel-button{ -webkit-appearance:none; appearance:none; }
-  #listSearchClear{
-    flex:0 0 auto; width:20px; height:20px; border-radius:999px;
-    display:flex; align-items:center; justify-content:center;
-    background:rgba(42,38,32,0.18); border:none; color:var(--input-text); padding:0;
-  }
-  #listSearchClear svg{ width:11px; height:11px; display:block; }
-
   .newFolderRow{
     display:flex; align-items:center; gap:8px; width:100%;
     background:transparent; border:none;
@@ -758,14 +746,6 @@
     border-left:1px solid var(--line);
     margin:0 0 4px 8px;
   }
-
-  .listFolderChip{
-    display:flex; align-items:center; gap:3px;
-    font-size:10px; color:var(--paper-dim);
-    max-width:96px;
-  }
-  .listFolderChip svg{ width:11px; height:11px; flex:0 0 auto; }
-  .listFolderChip span{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 
   #folderPickerList{ max-height:50vh; overflow-y:auto; margin-bottom:16px; }
   .folderPickItem{
@@ -906,7 +886,7 @@
   <!-- ===== 保存一覧ページ ===== -->
   <div id="listScreen" class="pageScreen" hidden>
     <header class="pageHeader">
-      <span class="pageTitle" id="listBrand">保存一覧</span>
+      <span class="pageTitle">保存一覧</span>
       <div class="headerActions">
         <button id="exportBtn" class="iconBtn" type="button" aria-label="バックアップを書き出す" title="バックアップを書き出す（JSONファイル）">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"></path><polyline points="7 10 12 15 17 10"></polyline><path d="M4 19h16"></path></svg>
@@ -920,13 +900,6 @@
         </button>
       </div>
     </header>
-    <div id="listSearchBar">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-      <input id="listSearchInput" type="search" placeholder="タイトル・漢字で検索" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="search" />
-      <button id="listSearchClear" type="button" aria-label="検索をクリア" hidden>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><line x1="5" y1="5" x2="19" y2="19"></line><line x1="19" y1="5" x2="5" y2="19"></line></svg>
-      </button>
-    </div>
     <div id="listRows"></div>
   </div>
 
@@ -1046,12 +1019,9 @@
   const listNewBtn = document.getElementById('listNewBtn');
   const newBtn = document.getElementById('newBtn');
   const listRows = document.getElementById('listRows');
-  const listBrand = document.getElementById('listBrand');
   const exportBtn = document.getElementById('exportBtn');
   const importBtn = document.getElementById('importBtn');
   const importFileInput = document.getElementById('importFileInput');
-  const listSearchInput = document.getElementById('listSearchInput');
-  const listSearchClear = document.getElementById('listSearchClear');
 
   const tabBar = document.getElementById('tabBar');
   const tabIndicator = document.getElementById('tabIndicator');
@@ -1140,6 +1110,7 @@
     '范', '吊', '凛',
     '晒', '蚕', '惨', '残', '参', '誉', '欲', '余',
     '雇', '晴',
+    '嘱', '葱',
   ]);
   // 簡体字1字に新字体・旧字体など複数の候補があり、逆引きがたまたま違う方（主に旧字体）を
   // 選んでしまっているケース。気づいたものはここで正しい新字体を指定して上書きする。
@@ -1583,44 +1554,34 @@
 
     const lines = raw.split('\n');
     const frag = document.createDocumentFragment();
+    let hasBlock = false;
+    let blankBefore = false; // 直前に表示した行との間に空行があったか
 
     lines.forEach((line) => {
-      if (line.trim() === '') return;
+      if (line.trim() === '') { blankBefore = true; return; }
 
       const normalized = normalizeToSimplified(line);
-
-      if (state.pinyinOff) {
-        const block = document.createElement('div');
+      let block;
+      if (state.contourOn && !state.pinyinOff) {
+        block = buildContourBlock(normalized);
+      } else {
+        block = document.createElement('div');
         block.className = 'lineBlock';
         const zhDiv = document.createElement('div');
         zhDiv.className = 'zhLine';
         renderDisplayText(zhDiv, normalized);
         block.appendChild(zhDiv);
-        frag.appendChild(block);
-        return;
+        if (!state.pinyinOff) {
+          const pyDiv = document.createElement('div');
+          pyDiv.className = 'pyLine';
+          pyDiv.textContent = lineToPinyin(normalized);
+          block.appendChild(pyDiv);
+        }
       }
-
-      if (state.contourOn) {
-        frag.appendChild(buildContourBlock(normalized));
-        return;
-      }
-
-      const pyText = lineToPinyin(normalized);
-
-      const block = document.createElement('div');
-      block.className = 'lineBlock';
-
-      const zhDiv = document.createElement('div');
-      zhDiv.className = 'zhLine';
-      renderDisplayText(zhDiv, normalized);
-
-      const pyDiv = document.createElement('div');
-      pyDiv.className = 'pyLine';
-      pyDiv.textContent = pyText;
-
-      block.appendChild(zhDiv);
-      block.appendChild(pyDiv);
+      if (hasBlock && blankBefore) block.classList.add('afterBlank');
       frag.appendChild(block);
+      hasBlock = true;
+      blankBefore = false;
     });
 
     results.innerHTML = '';
@@ -1642,6 +1603,9 @@
     card.className = 'kcard' + (state.contourOn ? ' contourOn' : '');
     card.dataset.char = ch;
     if (base) card.dataset.base = base;
+    // このカードが表している声調（単語シートで、違う声調で読まれている音節に下線を引くのに使う）。
+    // data-toneは声調カーブの記号用のCSSが使っているので別の名前にする
+    card.dataset.readingTone = normalizeToneDigit(toneDigit || '');
 
     const hz = document.createElement('span');
     hz.className = 'khz' + (hasWord ? '' : ' noWord');
@@ -1679,8 +1643,32 @@
     activeWordCard = card || null;
     if (activeWordCard) activeWordCard.classList.add('wordActive');
   }
-  // 現在の表示設定（声調123／声調カーブ／日本字体）に合わせて中身だけを作り直す
-  function renderWordSheetContent(ch, base) {
+  // 単語のピンインをelに入れる（単語区切りごとにスペース。lineToPinyinと同じ並び）。
+  // mark = { ch, base, tone } のときは、その漢字がbaseの音で、しかもtoneとは違う声調で読まれている音節に下線を引く
+  function renderWordPinyin(el, word, mark) {
+    const groups = segmentCached(word, state.toneType);
+    const readings = getWordCharReadings(word); // 同じ単語を声調番号つきで区切った結果（1文字ずつ同じ順に並ぶ）
+    const flatCount = groups.reduce((n, g) => n + g.length, 0);
+    const canMark = mark && mark.tone && readings.length === flatCount;
+    let i = 0;
+    groups.forEach((group, gi) => {
+      if (gi) el.appendChild(document.createTextNode(' '));
+      group.forEach((g) => {
+        const r = readings[i++];
+        if (canMark && r.ch === mark.ch && r.base === mark.base && r.tone !== mark.tone) {
+          const span = document.createElement('span');
+          span.className = 'toneDiff';
+          span.textContent = g.result;
+          el.appendChild(span);
+        } else {
+          el.appendChild(document.createTextNode(g.result));
+        }
+      });
+    });
+  }
+  // 現在の表示設定（声調123／声調カーブ／日本字体）に合わせて中身だけを作り直す。
+  // tone：タップしたカードの声調。これと違う声調で読まれている音節に下線を引く
+  function renderWordSheetContent(ch, base, tone) {
     const matches = wordsForChar(ch, base);
     wordSheetList.innerHTML = '';
     matches.forEach((w) => {
@@ -1697,7 +1685,7 @@
         renderDisplayText(hz, w);
         const py = document.createElement('div');
         py.className = 'wordSheetPy';
-        py.textContent = state.pinyinOff ? '' : lineToPinyin(w);
+        if (!state.pinyinOff) renderWordPinyin(py, w, { ch, base, tone });
         if (personWords.has(w)) {
           const icon = document.createElement('span');
           icon.className = 'wordSheetPersonIcon';
@@ -1712,7 +1700,7 @@
     return matches.length;
   }
   function openWordSheetFor(ch, cardEl, base) {
-    if (!renderWordSheetContent(ch, base)) return;
+    if (!renderWordSheetContent(ch, base, cardEl ? cardEl.dataset.readingTone : '')) return;
     activeWordChar = ch;
     activeWordBase = base || '';
     // タップした漢字が画面下半分にある場合は、シートに隠れないよう上から出す
@@ -1918,6 +1906,7 @@
   });
   // 表示切り替えボタンの点灯状態を今のstateに合わせる（全ヘッダーのボタンをまとめて更新する）
   function updateDisplayTogglesUI() {
+    document.body.classList.toggle('jaKanjiOn', state.jaKanjiOn);
     document.querySelectorAll('.dispToggle').forEach((btn) => {
       const t = DISPLAY_TOGGLES.find((x) => x.key === btn.dataset.toggle);
       const on = t.isOn();
@@ -2245,7 +2234,6 @@
         return;
       }
       const c = mergeImportedBackup(data);
-      updateListChrome();
       renderListRows();
       refreshWordbookIfOpen();
       refreshAllKanjiIfOpen();
@@ -2261,14 +2249,9 @@
     reader.readAsText(file);
   });
 
-  // 保存一覧の表示状態：query は検索文字列。フォルダはアコーディオンなので展開中のIDをSetで持つ
-  const listView = { query: '' };
+  // 保存一覧の表示状態：フォルダはアコーディオンなので展開中のIDをSetで持つ
   const expandedFolders = new Set();
 
-  function folderName(id) {
-    const f = folders.find((x) => x.id === id);
-    return f ? f.name : '';
-  }
   function fileCountInFolder(id) {
     return savedFiles.filter((f) => (f.folderId || null) === id).length;
   }
@@ -2281,20 +2264,6 @@
     folders.push(folder);
     persistFolders();
     return folder;
-  }
-
-  // タイトル or 中の漢字で検索（「你好」なら 你 と 好 を両方含むファイルを拾う）
-  function fileMatchesQuery(file, q) {
-    const query = q.trim();
-    if (!query) return true;
-    if ((file.title || '').toLowerCase().indexOf(query.toLowerCase()) >= 0) return true;
-    const text = normalizeToSimplified(file.text || '');
-    if (text.indexOf(query) >= 0) return true;
-    const hanziChars = [];
-    for (const ch of query) {
-      if (HANZI_RE.test(ch)) hanziChars.push(normalizeToSimplified(ch));
-    }
-    return hanziChars.length > 0 && hanziChars.every((ch) => text.indexOf(ch) >= 0);
   }
 
   // ---------- アイコン ----------
@@ -2443,28 +2412,10 @@
   });
 
   // ================= 保存一覧ページ =================
-  // 保存一覧ページを表示する直前に呼ぶ：検索欄と一覧を今の状態に合わせて作り直す
+  // 保存一覧ページを表示する直前に呼ぶ：一覧を今の状態に合わせて作り直す
   function prepareListScreen() {
-    updateListChrome();
-    listSearchInput.value = listView.query;
-    listSearchClear.hidden = !listView.query;
     renderListRows();
   }
-
-  function updateListChrome() {
-    listBrand.textContent = listView.query.trim() ? '検索結果' : '保存一覧';
-  }
-
-  function setQuery(q) {
-    listView.query = q;
-    if (listSearchInput.value !== q) listSearchInput.value = q;
-    listSearchClear.hidden = !q;
-    updateListChrome();
-    renderListRows();
-    listRows.scrollTop = 0;
-  }
-  listSearchInput.addEventListener('input', () => setQuery(listSearchInput.value));
-  listSearchClear.addEventListener('click', () => { setQuery(''); listSearchInput.focus(); });
 
   function emptyRow(msg) {
     const empty = document.createElement('div');
@@ -2475,18 +2426,6 @@
 
   function renderListRows() {
     listRows.innerHTML = '';
-    const q = listView.query.trim();
-
-    // 検索中：全ファイルを横断してフラット表示
-    if (q) {
-      const hits = savedFiles.filter((f) => fileMatchesQuery(f, q));
-      if (!hits.length) {
-        listRows.appendChild(emptyRow('該当する保存はありません'));
-        return;
-      }
-      hits.forEach((file) => listRows.appendChild(makeListRow(file, { showFolder: true })));
-      return;
-    }
 
     // フォルダ一覧（アコーディオン開閉）→ ルート直下のファイル
     const newFolderBtn = document.createElement('button');
@@ -2506,7 +2445,7 @@
         if (!inFolder.length) {
           body.appendChild(emptyRow('このフォルダは空です'));
         } else {
-          inFolder.forEach((file) => body.appendChild(makeListRow(file, {})));
+          inFolder.forEach((file) => body.appendChild(makeListRow(file)));
         }
         listRows.appendChild(body);
       });
@@ -2523,7 +2462,7 @@
       listRows.appendChild(emptyRow('保存された内容はまだありません'));
       return;
     }
-    rootFiles.forEach((file) => listRows.appendChild(makeListRow(file, {})));
+    rootFiles.forEach((file) => listRows.appendChild(makeListRow(file)));
   }
 
   // 保存済みファイルを複製する。複製は元ファイルのすぐ後ろに挿入する
@@ -2538,8 +2477,7 @@
     renderListRows();
   }
 
-  function makeListRow(file, opts) {
-    opts = opts || {};
+  function makeListRow(file) {
     const wrap = document.createElement('div');
     wrap.className = 'listRowWrap';
 
@@ -2594,13 +2532,6 @@
     const meta = document.createElement('span');
     meta.className = 'listMeta';
 
-    if (opts.showFolder && file.folderId && folderName(file.folderId)) {
-      const chip = document.createElement('span');
-      chip.className = 'listFolderChip';
-      chip.innerHTML = FOLDER_SVG + '<span>' + escapeHtml(folderName(file.folderId)) + '</span>';
-      meta.appendChild(chip);
-    }
-
     const editBtn = document.createElement('button');
     editBtn.type = 'button';
     editBtn.className = 'listEditBtn';
@@ -2620,7 +2551,7 @@
 
     wrap.appendChild(actions);
     wrap.appendChild(row);
-    attachFileRowGestures(wrap, row, () => { loadFile(file); showTab('input'); }, !opts.showFolder);
+    attachFileRowGestures(wrap, row, () => { loadFile(file); showTab('input'); }, true);
     return wrap;
   }
 
@@ -2995,7 +2926,6 @@
     if (!nm) return;
     folder.name = nm;
     persistFolders();
-    updateListChrome();
     renderListRows();
   }
 
@@ -3333,8 +3263,7 @@
     if (!nameModal.hidden) { finishName(null); return; }
     if (!folderPicker.hidden) { closeFolderPicker(); return; }
     if (!saveModal.hidden) { closeSaveModal(); return; }
-    if (state.tab === 'wordbook' && wordSelectMode) { exitWordSelectMode(); renderWordGrid(); return; }
-    if (state.tab === 'list' && listView.query.trim()) setQuery('');
+    if (state.tab === 'wordbook' && wordSelectMode) { exitWordSelectMode(); renderWordGrid(); }
   });
 
   // ================= 画面の実高さをCSS変数へ反映 =================
