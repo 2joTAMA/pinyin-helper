@@ -2474,11 +2474,13 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
   function exportBackup() {
     const payload = {
       app: 'pinyin-helper',
-      version: 1,
+      version: 2,
       exportedAt: Date.now(),
       savedFiles: savedFiles,
       folders: folders,
       words: savedWords,
+      personWords: Array.from(personWords),
+      allKanji: allKanji,
     };
     const json = JSON.stringify(payload, null, 2);
     const blob = new Blob([json], { type: 'application/json' });
@@ -2496,11 +2498,16 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
     setTimeout(() => URL.revokeObjectURL(url), 2000);
   }
 
-  // 既存データは残したまま、IDが重複しないファイル・フォルダ・単語だけを追加する（上書きしない）
+  // 既存データは残したまま、まだ無いファイル・フォルダ・単語・人名登録・全漢字だけを追加する（上書きしない）。
+  // version 1 のバックアップには personWords / allKanji が無いので、その場合は単語に含まれる漢字だけ全漢字に足す。
+  // 戻り値は種類ごとの追加件数
   function mergeImportedBackup(data) {
     const importedFolders = Array.isArray(data.folders) ? data.folders : [];
     const importedFiles = Array.isArray(data.savedFiles) ? data.savedFiles : [];
     const importedWords = Array.isArray(data.words) ? data.words : [];
+    const importedPersonWords = Array.isArray(data.personWords) ? data.personWords : [];
+    const importedAllKanji = Array.isArray(data.allKanji) ? data.allKanji : [];
+    const counts = { files: 0, words: 0, personWords: 0, kanji: 0 };
 
     const existingFolderIds = new Set(folders.map((f) => f.id));
     importedFolders.forEach((f) => {
@@ -2511,13 +2518,12 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
     });
 
     const existingFileIds = new Set(savedFiles.map((f) => f.id));
-    let addedCount = 0;
     importedFiles.forEach((f) => {
       if (f && f.id && !existingFileIds.has(f.id)) {
         migrateFileTitle(f);
         savedFiles.push(f);
         existingFileIds.add(f.id);
-        addedCount += 1;
+        counts.files += 1;
       }
     });
 
@@ -2526,13 +2532,30 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
       if (typeof w === 'string' && w && !existingWords.has(w)) {
         savedWords.push(w);
         existingWords.add(w);
+        counts.words += 1;
       }
     });
+
+    // 人名登録は単語帳に存在する単語の分だけ取り込む
+    importedPersonWords.forEach((w) => {
+      if (typeof w === 'string' && existingWords.has(w) && !personWords.has(w)) {
+        personWords.add(w);
+        counts.personWords += 1;
+      }
+    });
+
+    // 全漢字はバックアップ内の登録順を保ったまま末尾に足し、続けて単語に含まれる漢字も足す
+    // （アプリ内で単語を登録したときと同じく、単語の漢字は全漢字にも入っている状態にそろえる）
+    const kanjiBefore = allKanji.length;
+    addAllKanji(importedAllKanji.filter((ch) => typeof ch === 'string').join(''));
+    addAllKanji(importedWords.filter((w) => typeof w === 'string').join(''));
+    counts.kanji = allKanji.length - kanjiBefore;
 
     persistFolders();
     persistSavedFiles();
     persistWords();
-    return addedCount;
+    persistPersonWords();
+    return counts;
   }
 
   exportBtn.addEventListener('click', exportBackup);
@@ -2551,16 +2574,24 @@ const CUSTOM_WORDS = {"你好":"nǐ hǎo","你们":"nǐ men","我们":"wǒ men",
         alert('ファイルの読み込みに失敗しました（JSON形式が正しくないようです）');
         return;
       }
-      if (!data || (!Array.isArray(data.savedFiles) && !Array.isArray(data.folders))) {
+      if (!data || (data.app !== 'pinyin-helper' &&
+          !['savedFiles', 'folders', 'words', 'personWords', 'allKanji'].some((k) => Array.isArray(data[k])))) {
         alert('このファイルはバックアップ形式ではないようです');
         return;
       }
-      const added = mergeImportedBackup(data);
+      const c = mergeImportedBackup(data);
       updateListChrome();
       renderListRows();
-      alert(added > 0
-        ? added + '件のファイルを読み込みました（既存のデータはそのまま残っています）'
-        : '新しく追加されたファイルはありませんでした（すでに読み込み済みの可能性があります）');
+      refreshWordbookIfOpen();
+      refreshAllKanjiIfOpen();
+      const parts = [];
+      if (c.files) parts.push('ファイル' + c.files + '件');
+      if (c.words) parts.push('単語' + c.words + '件');
+      if (c.personWords) parts.push('人名登録' + c.personWords + '件');
+      if (c.kanji) parts.push('漢字' + c.kanji + '字');
+      alert(parts.length
+        ? parts.join('、') + 'を読み込みました（既存のデータはそのまま残っています）'
+        : '新しく追加されたデータはありませんでした（すでに読み込み済みの可能性があります）');
     };
     reader.readAsText(file);
   });
