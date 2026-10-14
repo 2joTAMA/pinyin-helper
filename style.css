@@ -26,6 +26,8 @@
   --warn:#e2574c;
   --ja-accent:#93d1f2;
   --ja-accent-dim:#7e93a1;
+  /* タブバーの下端と画面の下端の間隔（iOS 26 の App Store のタブバーの位置に合わせた目安。ここを変えれば上下に動く） */
+  --tabbar-bottom:22px;
   /* 画面下端からタブバー上端までの高さ。起動時にJS(syncFooterOffsets)が実測値で上書きする。ここでの値は読み込み直後の暫定値 */
   --footer-total-h:80px;
   /* 漢字の書体。同じ文字コードでも書体によって字形が違う（敏・偏など）ので、中国語の字形の書体を優先する。
@@ -145,7 +147,7 @@ input, textarea{ caret-color:var(--seal); }
 /* ---------- 入力ページの2段目：ファイル名（左）と新規・保存（右） ---------- */
 #fileBar{
   flex:0 0 auto;
-  display:flex; align-items:center; gap:6px;
+  display:flex; align-items:center; gap:8px;
   padding:2px 10px 4px 16px;
 }
 #titleWrap{
@@ -160,13 +162,14 @@ input, textarea{ caret-color:var(--seal); }
 #fileTitle.untitled{ color:var(--paper-dim); }
 #renameBtn{ width:26px; height:26px; flex:0 0 auto; }
 #renameBtn svg{ width:13px; height:13px; }
-#newBtn{ width:32px; height:32px; }
+/* 「新規」は保存とは別の、文字付きの囲みボタン（保存一覧の書き出し・読み込み・新規と同じ見た目） */
+#newBtn.pillGroupBtn{ height:32px; padding:0 12px; font-size:12px; }
 #saveBtn{
   display:flex; align-items:center; gap:5px;
   background:transparent;
   border:1px solid var(--seal-soft);
   color:var(--paper-dim);
-  padding:5px 11px;
+  height:32px; padding:0 12px;
   border-radius:999px;
   font-size:12px;
   line-height:1;
@@ -185,7 +188,7 @@ input, textarea{ caret-color:var(--seal); }
 #tabBar{
   position:fixed;
   left:12px; right:12px;
-  bottom:max(10px, calc(env(safe-area-inset-bottom) - 8px));
+  bottom:max(var(--tabbar-bottom), calc(env(safe-area-inset-bottom) - 8px));
   z-index:60;
   display:grid; grid-template-columns:repeat(4, 1fr);
   padding:4px;
@@ -657,13 +660,17 @@ main{
 .wordGroup + .wordGroup{ margin-top:6px; }
 .wordGroupGrid{ display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:8px; }
 /* 見出しはそのグループを見ている間だけ上部（ヘッダー）のすぐ下に固定し、次のグループの見出しが来たら押し上げられる。
-   下のカードが透けないよう背景を塗り、左右は一覧の余白（16px）の分まで広げる */
+   横幅いっぱいの帯にすると上部のすりガラスの下でそこだけ重く見えるので、文字の幅だけの小さなすりガラスのカプセルにする */
 .wordGroupLabel{
-  position:sticky; top:var(--top-h, 0px); z-index:3;
-  margin:0 -16px 8px;
-  padding:7px 16px 6px;
-  background:var(--ink);
-  border-bottom:0.5px solid var(--sep);
+  position:sticky; top:calc(var(--top-h, 0px) + 6px); z-index:3;
+  width:fit-content;
+  margin:0 0 8px;
+  padding:4px 12px;
+  border-radius:999px;
+  background:rgba(59,56,51,0.7);
+  -webkit-backdrop-filter:blur(12px) saturate(150%);
+  backdrop-filter:blur(12px) saturate(150%);
+  border:0.5px solid var(--glass-border);
   font-size:13px; font-weight:700; color:var(--seal);
   letter-spacing:0.4px; text-transform:uppercase;
 }
