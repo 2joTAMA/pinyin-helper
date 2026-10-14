@@ -2,9 +2,11 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<!-- ステータスバーの裏までページを広げる設定（black-translucent＋viewport-fit=cover）にすると、ホーム画面アプリで
+     iPhoneが報告する画面の高さが実際より短くなり、画面の下に余白が出ることがあるため、ページはステータスバーの下から始める -->
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="拼音帮手">
 <link rel="apple-touch-icon" href="images/apple-touch-icon.png">
 <link rel="manifest" href="manifest.webmanifest">
