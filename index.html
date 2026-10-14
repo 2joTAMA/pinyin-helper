@@ -232,6 +232,7 @@
   // ---------- element refs ----------
   const input = document.getElementById('zhInput');
   const results = document.getElementById('results');
+  const inputPageTop = document.querySelector('body > .pageTop');
   const clearBtn = document.getElementById('clearBtn');
   const undoBtn = document.getElementById('undoBtn');
   const surume = document.getElementById('surume');
@@ -787,26 +788,31 @@
 
   // ================= 入力ページ（文章とピンイン） =================
   // 表示エリアで今一番上に見えている行（何番目の行か、その行の上端が表示エリアの上端からどれだけずれているか）
+  // 基準にするのは、上部（すりガラスのヘッダー）の下に上端まで見えている最初の行（書体が変わって行の高さが変わっても、
+  // 見えている行がずれないように。行が長くてそういう行が無いときは、ヘッダーの下にかかっている行）
   function captureResultsAnchor() {
-    const top = results.getBoundingClientRect().top;
+    const top = inputPageTop.getBoundingClientRect().bottom;
     const blocks = results.children;
+    let partial = null;
     for (let i = 0; i < blocks.length; i++) {
       const r = blocks[i].getBoundingClientRect();
-      if (r.bottom > top) return { index: i, offset: r.top - top };
+      if (r.bottom <= top) continue;
+      if (r.top >= top - 1) return { index: i, offset: r.top - top, top };
+      if (!partial) partial = { index: i, offset: r.top - top, top };
     }
-    return null;
+    return partial;
   }
   // captureResultsAnchorで覚えた行が、描き直したあとも同じ位置に来るようにスクロールを合わせる
   function restoreResultsAnchor(anchor) {
     const block = anchor && results.children[anchor.index];
     if (!block) return;
-    results.scrollTop += block.getBoundingClientRect().top - results.getBoundingClientRect().top - anchor.offset;
+    results.scrollTop += block.getBoundingClientRect().top - anchor.top - anchor.offset;
   }
 
-  // keepScroll=trueのときは見ていた位置をそのまま保つ（表示切り替えボタン用）。
-  // falseのときは入力中の最新の行が見えるよう一番下までスクロールする
-  function renderSentence(keepScroll) {
-    const anchor = keepScroll ? captureResultsAnchor() : null;
+  // scrollAnchor（captureResultsAnchorの結果）を渡したときは、見ていた位置をそのまま保つ（表示切り替えボタン用）。
+  // 省略したときは入力中の最新の行が見えるよう一番下までスクロールする
+  function renderSentence(scrollAnchor) {
+    const keepScroll = scrollAnchor !== undefined;
     const raw = input.value;
     const trimmed = raw ? raw.trim() : '';
 
@@ -849,7 +855,7 @@
 
     results.innerHTML = '';
     results.appendChild(frag);
-    if (keepScroll) restoreResultsAnchor(anchor);
+    if (keepScroll) restoreResultsAnchor(scrollAnchor);
     else results.scrollTop = results.scrollHeight;
   }
 
@@ -1166,12 +1172,54 @@
 
   // ================= 表示切り替え（声調カーブ／ピンインなし／日本字体） =================
   // 単語帳を開いている間に声調表示の設定を切り替えたら、単語帳側も即座に反映する
-  function refreshWordbookIfOpen() {
-    if (!wordbookScreen.hidden) renderWordGrid();
+  // 描き直しても見ていた場所が動かないよう、ヘッダーのすぐ下に見えていたカードを覚えておき、描き直し後に同じ位置へ戻す
+  // anchorは、表示を変える前にcaptureWordbookAnchorで測っておいたもの（省略時はここで測る）
+  function refreshWordbookIfOpen(anchor) {
+    if (wordbookScreen.hidden) return;
+    if (anchor === undefined) anchor = captureWordbookAnchor();
+    renderWordGrid();
+    restoreGridAnchor(wordGrid, anchor);
   }
-  // 全漢字ページを開いている間も同様に即座に反映する
-  function refreshAllKanjiIfOpen() {
-    if (!allKanjiScreen.hidden) renderAllKanjiGrid();
+  function captureWordbookAnchor() {
+    if (wordbookScreen.hidden) return null;
+    return captureGridAnchor(wordGrid, '.wordChip', (el) => '.wordChip[data-word="' + CSS.escape(el.dataset.word) + '"]');
+  }
+  // 全漢字ページを開いている間も同様に即座に反映する（同じ漢字が複数の読みのグループに出るので、読みまで一致するカードを探す）
+  function refreshAllKanjiIfOpen(anchor) {
+    if (allKanjiScreen.hidden) return;
+    if (anchor === undefined) anchor = captureAllKanjiAnchor();
+    renderAllKanjiGrid();
+    restoreGridAnchor(allKanjiGrid, anchor);
+  }
+  function captureAllKanjiAnchor() {
+    if (allKanjiScreen.hidden) return null;
+    return captureGridAnchor(allKanjiGrid, '.kcard', (el) =>
+      '.kcard[data-char="' + CSS.escape(el.dataset.char) + '"][data-base="' + CSS.escape(el.dataset.base || '') + '"]');
+  }
+  // 一覧（grid）で、上部（すりガラスのヘッダー）のすぐ下に最初に見えている項目と、その上端の位置を覚える。
+  // selectorOf(el)は、描き直したあとに同じ項目を探すためのセレクタを返す
+  // 基準にするのは、上部の下に上端まで見えている最初の項目（書体が変わって項目の高さが変わっても、見えている所がずれないように）
+  function captureGridAnchor(grid, itemSelector, selectorOf) {
+    const line = grid.getBoundingClientRect().top + (parseFloat(getComputedStyle(grid).scrollPaddingTop) || 0);
+    const items = grid.querySelectorAll(itemSelector);
+    let partial = null;
+    for (let i = 0; i < items.length; i++) {
+      const r = items[i].getBoundingClientRect();
+      if (r.bottom <= line) continue;
+      if (r.top >= line - 1) return { selector: selectorOf(items[i]), offset: r.top - line, line };
+      if (!partial) partial = { selector: selectorOf(items[i]), offset: r.top - line, line };
+    }
+    return partial;
+  }
+  // captureGridAnchorで覚えた項目が、描き直したあとも同じ位置に来るようにgridだけをスクロールする。
+  // 声調カーブ表示の単語帳は画面外のカードの高さを見積もりで並べていて（content-visibility）、画面近くのカードが
+  // 実際の高さになると少しずれるので、続く2フレームでもう一度合わせ直す
+  function restoreGridAnchor(grid, anchor) {
+    const el = anchor && grid.querySelector(anchor.selector);
+    if (!el) return;
+    const align = () => { grid.scrollTop += el.getBoundingClientRect().top - anchor.line - anchor.offset; };
+    align();
+    requestAnimationFrame(() => { align(); requestAnimationFrame(align); });
   }
 
   // ヘッダー右の表示切り替えボタン。入力・単語帳・全漢字の各ヘッダーの .displayToggles に同じものを並べる。
@@ -1244,11 +1292,15 @@
   function applyDisplaySettingChange(fn) {
     const reopenChar = wordSheet.classList.contains('open') ? activeWordChar : null;
     const reopenBase = activeWordBase;
+    // 見ている位置は、表示を変える前に測る（日本漢字は書体が変わって行の高さが変わるので、変えた後では遅い）
+    const inputAnchor = captureResultsAnchor();
+    const wordbookAnchor = captureWordbookAnchor();
+    const allKanjiAnchor = captureAllKanjiAnchor();
     fn();
     updateDisplayTogglesUI();
-    renderInputPage(!!reopenChar, true);
-    refreshWordbookIfOpen();
-    refreshAllKanjiIfOpen();
+    renderInputPage(!!reopenChar, inputAnchor);
+    refreshWordbookIfOpen(wordbookAnchor);
+    refreshAllKanjiIfOpen(allKanjiAnchor);
     reopenWordSheetIfNeeded(reopenChar, reopenBase);
   }
 
@@ -1264,14 +1316,15 @@
 
   // ================= 入力ページの描画 =================
   // keepWordSheet=trueのときは単語シートを閉じない（表示切り替えボタン用。呼び出し側でシートの中身を後から作り直す）
-  // keepScroll=trueのときは表示エリアのスクロール位置を変えない（表示切り替えボタン用）
-  function renderInputPage(keepWordSheet, keepScroll) {
+  // scrollAnchorを渡したとき（captureResultsAnchorの結果。nullも可）は、表示エリアのスクロール位置を変えない（表示切り替えボタン用）。
+  // 省略したときは入力中の最新の行が見えるよう一番下までスクロールする
+  function renderInputPage(keepWordSheet, scrollAnchor) {
     if (!keepWordSheet) closeWordSheet();
     const trimmed = input.value ? input.value.trim() : '';
     updateSurume(trimmed !== '');
     clearBtn.classList.toggle('show', input.value.length > 0);
     updateSaveBtnDirtyState();
-    renderSentence(keepScroll);
+    renderSentence(scrollAnchor);
   }
 
   function autoGrow() {
@@ -2389,6 +2442,7 @@
       const isPerson = personWords.has(word);
       const chip = document.createElement('div');
       chip.className = 'wordChip' + (isPerson ? ' person' : '') + (selectedWords.has(word) ? ' selected' : '');
+      chip.dataset.word = word;
 
       if (isPerson) {
         const badge = document.createElement('div');

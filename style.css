@@ -524,6 +524,9 @@ main{
 }
 /* 上部（.pageTop）の下に重ねて、画面全体に広げるスクロール領域 */
 #listRows, #wordbookBody, #allKanjiBody{ position:absolute; inset:0; }
+/* 描き直したときのスクロール位置はJS（captureGridAnchor/restoreGridAnchor）で合わせるので、
+   ブラウザの自動補正（Safariには無い）は切って、どの環境でも同じ動きにする */
+#wordGrid, #allKanjiGrid, #results{ overflow-anchor:none; }
 
 /* ---------- 保存一覧ページ ---------- */
 #listRows{ overflow-y:auto; padding:calc(var(--top-h, 0px) + 14px) 16px calc(16px + var(--footer-total-h)); }
@@ -728,9 +731,10 @@ main{
 .wordChipContourRow .cChar{ font-size:20px; line-height:normal; letter-spacing:1px; }
 .wordChipContourRow .cTone{ width:17px; height:12px; margin-top:7px; margin-bottom:6px; }
 /* 記号モードは1文字ずつの組み立てで配置計算が重いので、画面外のカードは見えるまで計算を後回しにする
-   （高さは見積もり68px、一度表示したカードは実際の高さを覚える）。ほかのモードはピンインの文字サイズ調整で
+   （高さは実際と同じ68pxで見積もり、一度表示したカードは実際の高さを覚える）。ほかのモードはピンインの文字サイズ調整で
    全カードを測るため、後回しにするとかえって遅くなるので付けない */
-#wordGrid.contourMode .wordChip{ content-visibility:auto; contain-intrinsic-size:auto 68px; }
+/* 見積もりの高さは中身（padding・枠線を除いた部分）の高さで指定する：68px − 上下padding14px − 枠線1px */
+#wordGrid.contourMode .wordChip{ content-visibility:auto; contain-intrinsic-size:auto 53px; }
 
 /* ---------- 画面右下（タブバーの上）に浮かぶ丸いボタン。タブバーと同じすりガラス ---------- */
 .floatRoundBtn{
