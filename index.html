@@ -1543,7 +1543,27 @@
   });
 
   // ================= 入力ページ（文章とピンイン） =================
-  function renderSentence() {
+  // 表示エリアで今一番上に見えている行（何番目の行か、その行の上端が表示エリアの上端からどれだけずれているか）
+  function captureResultsAnchor() {
+    const top = results.getBoundingClientRect().top;
+    const blocks = results.children;
+    for (let i = 0; i < blocks.length; i++) {
+      const r = blocks[i].getBoundingClientRect();
+      if (r.bottom > top) return { index: i, offset: r.top - top };
+    }
+    return null;
+  }
+  // captureResultsAnchorで覚えた行が、描き直したあとも同じ位置に来るようにスクロールを合わせる
+  function restoreResultsAnchor(anchor) {
+    const block = anchor && results.children[anchor.index];
+    if (!block) return;
+    results.scrollTop += block.getBoundingClientRect().top - results.getBoundingClientRect().top - anchor.offset;
+  }
+
+  // keepScroll=trueのときは見ていた位置をそのまま保つ（表示切り替えボタン用）。
+  // falseのときは入力中の最新の行が見えるよう一番下までスクロールする
+  function renderSentence(keepScroll) {
+    const anchor = keepScroll ? captureResultsAnchor() : null;
     const raw = input.value;
     const trimmed = raw ? raw.trim() : '';
 
@@ -1586,7 +1606,8 @@
 
     results.innerHTML = '';
     results.appendChild(frag);
-    results.scrollTop = results.scrollHeight;
+    if (keepScroll) restoreResultsAnchor(anchor);
+    else results.scrollTop = results.scrollHeight;
   }
 
   // ================= 全漢字ページの漢字カード =================
@@ -1920,7 +1941,7 @@
     const reopenBase = activeWordBase;
     fn();
     updateDisplayTogglesUI();
-    renderInputPage(!!reopenChar);
+    renderInputPage(!!reopenChar, true);
     refreshWordbookIfOpen();
     refreshAllKanjiIfOpen();
     reopenWordSheetIfNeeded(reopenChar, reopenBase);
@@ -1938,13 +1959,14 @@
 
   // ================= 入力ページの描画 =================
   // keepWordSheet=trueのときは単語シートを閉じない（表示切り替えボタン用。呼び出し側でシートの中身を後から作り直す）
-  function renderInputPage(keepWordSheet) {
+  // keepScroll=trueのときは表示エリアのスクロール位置を変えない（表示切り替えボタン用）
+  function renderInputPage(keepWordSheet, keepScroll) {
     if (!keepWordSheet) closeWordSheet();
     const trimmed = input.value ? input.value.trim() : '';
     updateSurume(trimmed !== '');
     clearBtn.classList.toggle('show', input.value.length > 0);
     updateSaveBtnDirtyState();
-    renderSentence();
+    renderSentence(keepScroll);
   }
 
   function autoGrow() {
