@@ -1,13 +1,14 @@
 /* ===== Service Worker：電波がない場所でもアプリを起動できるよう、アプリのファイルを端末に保存しておく =====
-   - index.html（アプリ本体）は「ネット優先」：最新版を取りに行き、圏外や応答が遅いとき（3秒）だけ保存版を使う。
-     修正をpushしたら、次に電波のある場所で開いたときにすぐ反映される。
+   - index.html と style.css（アプリ本体）は「ネット優先」：最新版を取りに行き、圏外や応答が遅いとき（3秒）だけ保存版を使う。
+     修正をpushしたら、次に電波のある場所で開いたときにすぐ反映される（HTMLとCSSの版が食い違わない）。
    - ライブラリ・辞書・画像は「保存版優先」：保存版ですぐ表示し、裏で更新を確認して次回から新しい方を使う。
    - 保存したい・消したいファイルが増減したときは、PRECACHE_URLS と CACHE_NAME の番号を更新する。
    ※ 保存した文章・単語帳などのデータ（localStorage）はここでは一切扱わない。 */
-const CACHE_NAME = 'pinyin-helper-v1';
+const CACHE_NAME = 'pinyin-helper-v2';
 const PRECACHE_URLS = [
   './',
   'index.html',
+  'style.css',
   'manifest.webmanifest',
   'vendor/pinyin-pro.min.js',
   'data/kanji-map.js',
@@ -41,12 +42,13 @@ function putInCache(request, response) {
   caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
 }
 
-// ネット優先。失敗したかタイムアウトしたら保存版（どちらも無ければネットの結果を待つ）
+// ネット優先。失敗したかタイムアウトしたら保存版（どちらも無ければネットの結果を待つ）。
+// ページ本体（navigate）で保存版が見つからないときは index.html の保存版を使う
 function networkFirst(request) {
   const network = fetch(request).then((res) => { putInCache(request, res); return res; });
   const timeout = new Promise((resolve) => setTimeout(resolve, NETWORK_TIMEOUT_MS));
   const fallback = () => caches.match(request, { ignoreSearch: true })
-    .then((cached) => cached || caches.match('index.html'));
+    .then((cached) => cached || (request.mode === 'navigate' ? caches.match('index.html') : undefined));
   return Promise.race([network, timeout.then(() => fallback())])
     .then((res) => res || network)
     .catch(() => fallback().then((cached) => cached || network));
@@ -65,5 +67,6 @@ function staleWhileRevalidate(request) {
 self.addEventListener('fetch', (event) => {
   const req = event.request;
   if (req.method !== 'GET' || new URL(req.url).origin !== self.location.origin) return;
-  event.respondWith(req.mode === 'navigate' ? networkFirst(req) : staleWhileRevalidate(req));
+  const isAppShell = req.mode === 'navigate' || new URL(req.url).pathname.endsWith('/style.css');
+  event.respondWith(isAppShell ? networkFirst(req) : staleWhileRevalidate(req));
 });
