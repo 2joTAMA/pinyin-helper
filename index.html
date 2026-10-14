@@ -84,16 +84,16 @@
   .displayToggles{ display:flex; align-items:center; gap:4px; flex:0 0 auto; }
   .displayToggles[hidden]{ display:none; }
   .dispToggle{
-    display:flex; align-items:center; justify-content:center;
+    display:flex; align-items:center; justify-content:center; gap:3px;
     min-width:36px; height:32px;
-    padding:0 6px;
+    padding:0 10px;
     background:transparent;
     border:1px solid var(--line);
     border-radius:999px;
     color:var(--paper-dim);
-    font-size:14px; font-weight:700; line-height:1;
+    font-size:12px; font-weight:700; line-height:1; white-space:nowrap;
   }
-  .dispToggle svg{ width:17px; height:17px; display:block; }
+  .dispToggle svg{ width:15px; height:15px; display:block; flex:0 0 auto; }
   .dispToggle.active{ background:var(--seal); border-color:var(--seal); color:var(--ink); }
   .dispToggle[data-toggle="ja"].active{ background:var(--ja-accent); border-color:var(--ja-accent); }
 
@@ -552,7 +552,8 @@
   #wordGrid{
     flex:1 1 auto; min-width:0; overflow-y:auto; overflow-x:hidden;
     display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:8px;
-    padding:10px 16px calc(16px + var(--footer-total-h));
+    /* 下余白は、タブバーの高さ＋「一番上に戻る」ボタンに最後の行が隠れない分 */
+    padding:10px 16px calc(64px + var(--footer-total-h));
     align-content:start;
   }
   /* ピンイン順／声調順のときだけ、グループ見出しを2列分の幅いっぱいに挟む */
@@ -621,6 +622,26 @@
      （高さは見積もり68px、一度表示したカードは実際の高さを覚える）。ほかのモードはピンインの文字サイズ調整で
      全カードを測るため、後回しにするとかえって遅くなるので付けない */
   #wordGrid.contourMode .wordChip{ content-visibility:auto; contain-intrinsic-size:auto 68px; }
+
+  /* ---------- 画面右下（タブバーの上）に浮かぶ丸いボタン。タブバーと同じすりガラス ---------- */
+  .floatRoundBtn{
+    position:fixed;
+    right:16px;
+    bottom:calc(var(--footer-total-h) + 12px);
+    z-index:5;
+    display:flex; align-items:center; justify-content:center;
+    width:40px; height:40px;
+    padding:0;
+    border-radius:999px;
+    background:rgba(59,56,51,0.6);
+    -webkit-backdrop-filter:blur(18px) saturate(160%);
+    backdrop-filter:blur(18px) saturate(160%);
+    border:1px solid rgba(217,208,189,0.14);
+    box-shadow:0 6px 18px rgba(0,0,0,0.35);
+    color:var(--paper);
+  }
+  .floatRoundBtn:active{ background:rgba(217,208,189,0.2); }
+  .floatRoundBtn svg{ width:18px; height:18px; display:block; }
 
   /* ---------- 単語帳：右端のグループインデックス（ピンイン順／声調順のときだけ表示） ---------- */
   #wordbookIndex{
@@ -946,6 +967,10 @@
       <div id="wordGrid"></div>
       <div id="wordbookIndex" hidden></div>
     </div>
+    <!-- 登録順のときだけ出す「一番上に戻る」ボタン（右端の目次が無いので代わりに使う） -->
+    <button id="wordScrollTopBtn" class="floatRoundBtn" type="button" aria-label="一番上に戻る" title="一番上に戻る" hidden>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="6 11 12 5 18 11"></polyline></svg>
+    </button>
   </div>
 
   <!-- ===== 全漢字ページ ===== -->
@@ -1042,6 +1067,7 @@
   const wordAddInput = document.getElementById('wordAddInput');
   const wordGrid = document.getElementById('wordGrid');
   const wordbookIndex = document.getElementById('wordbookIndex');
+  const wordScrollTopBtn = document.getElementById('wordScrollTopBtn');
   const wordSortBtns = Array.from(document.querySelectorAll('.wordSortBtn'));
 
   const allKanjiScreen = document.getElementById('allKanjiScreen');
@@ -1852,7 +1878,7 @@
       },
     },
     {
-      key: 'contour', title: '声調を高低カーブの記号で表示（アルファベット非表示）',
+      key: 'contour', label: '声調', title: '声調を高低カーブの記号で表示（アルファベット非表示）',
       icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 17 L9 7 L15 7 L20 17"></path></svg>',
       isOn: () => state.contourOn,
       apply: () => {
@@ -1861,7 +1887,7 @@
       },
     },
     {
-      key: 'off', title: 'ピンインを表示しない',
+      key: 'off', label: '非表示', title: 'ピンインを表示しない',
       icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><line x1="5.6" y1="5.6" x2="18.4" y2="18.4"></line></svg>',
       isOn: () => state.pinyinOff,
       apply: () => {
@@ -1870,7 +1896,7 @@
       },
     },
     {
-      key: 'ja', label: '日', title: '漢字を日本の字体で表示（内部のデータは変わりません）',
+      key: 'ja', label: '日本漢字', title: '漢字を日本の字体で表示（内部のデータは変わりません）',
       isOn: () => state.jaKanjiOn,
       apply: () => { state.jaKanjiOn = !state.jaKanjiOn; },
     },
@@ -1884,8 +1910,8 @@
       btn.dataset.toggle = t.key;
       btn.title = t.title;
       btn.setAttribute('aria-label', t.title);
-      if (t.icon) btn.innerHTML = t.icon;
-      else btn.textContent = t.label;
+      // アイコン（あれば）＋文字
+      btn.innerHTML = (t.icon || '') + '<span>' + escapeHtml(t.label) + '</span>';
       btn.addEventListener('click', () => applyDisplaySettingChange(t.apply));
       box.appendChild(btn);
     });
@@ -3059,6 +3085,8 @@
     wordbookIndex.innerHTML = '';
     const grouped = wordSortMode !== 'registered';
     wordbookIndex.hidden = !grouped;
+    // 登録順のときは目次が無いので、代わりに「一番上に戻る」ボタンを出す
+    wordScrollTopBtn.hidden = grouped || !savedWords.length;
     if (!savedWords.length) {
       wordGrid.innerHTML = '<div class="listEmpty">まだ単語が登録されていません</div>';
       return;
@@ -3141,6 +3169,7 @@
     wordbookIndexActiveEl = item || null;
     if (wordbookIndexActiveEl) wordbookIndexActiveEl.classList.add('active');
   }
+  wordScrollTopBtn.addEventListener('click', () => wordGrid.scrollTo({ top: 0, behavior: 'smooth' }));
   wordbookIndex.addEventListener('click', (e) => {
     const item = e.target.closest('.wordbookIndexItem');
     if (item) jumpWordbookToGroup(item.dataset.groupKey);
