@@ -14,40 +14,44 @@
 </head>
 <body>
   <!-- ===== 入力ページ（土台の画面。ほかのページはこの上に全画面で重ねて表示する） ===== -->
-  <header id="topHeader" class="pageHeader">
-    <span class="pageTitle">入力</span>
-    <div class="displayToggles"></div>
-  </header>
+  <!-- 上部（ヘッダーなど）は内容の上に重ねて表示する。後ろをスクロールする内容がすりガラス越しに透ける -->
+  <div class="pageTop">
+    <header id="topHeader" class="pageHeader">
+      <span class="pageTitle">入力</span>
+      <div class="displayToggles"></div>
+    </header>
 
-  <div id="fileBar">
-    <div id="titleWrap">
-      <span id="fileTitle"></span>
-      <button id="renameBtn" class="iconBtn" type="button" aria-label="タイトルを編集" title="タイトルを編集">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg>
+    <div id="fileBar">
+      <div id="titleWrap">
+        <span id="fileTitle"></span>
+        <button id="renameBtn" class="iconBtn" type="button" aria-label="タイトルを編集" title="タイトルを編集">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg>
+        </button>
+      </div>
+      <button id="newBtn" class="iconBtn" type="button" aria-label="新規作成" title="新規作成">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+      </button>
+      <button id="saveBtn" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+        保存
       </button>
     </div>
-    <button id="newBtn" class="iconBtn" type="button" aria-label="新規作成" title="新規作成">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-    </button>
-    <button id="saveBtn" type="button">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
-      保存
-    </button>
-  </div>
 
-  <div id="inputWrap">
-    <textarea id="zhInput" rows="1" placeholder="ここに入力／貼り付け" autocapitalize="off" autocorrect="off" spellcheck="false"></textarea>
-    <div class="inputTools">
-      <button id="undoBtn" class="miniBtn" type="button" title="元に戻す" disabled>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10a7 7 0 1 1 2 4.9"></path><polyline points="3 4 3 10 9 10"></polyline></svg>
-      </button>
-      <button id="clearBtn" class="miniBtn" type="button" title="クリア">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="5" y1="5" x2="19" y2="19"></line><line x1="19" y1="5" x2="5" y2="19"></line></svg>
+    <div id="inputWrap">
+      <textarea id="zhInput" rows="1" placeholder="ここに入力／貼り付け" autocapitalize="off" autocorrect="off" spellcheck="false"></textarea>
+      <div class="inputTools">
+        <button id="undoBtn" class="miniBtn" type="button" title="元に戻す" disabled>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10a7 7 0 1 1 2 4.9"></path><polyline points="3 4 3 10 9 10"></polyline></svg>
+        </button>
+        <button id="clearBtn" class="miniBtn" type="button" title="クリア">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="5" y1="5" x2="19" y2="19"></line><line x1="19" y1="5" x2="5" y2="19"></line></svg>
+        </button>
+      </div>
+      <button id="focusToggle" type="button" aria-pressed="false" title="入力欄を畳んで広く表示">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 11 12 6 7 11"></polyline><polyline points="17 18 12 13 7 18"></polyline></svg>
       </button>
     </div>
-    <button id="focusToggle" type="button" aria-pressed="false" title="入力欄を畳んで広く表示">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 11 12 6 7 11"></polyline><polyline points="17 18 12 13 7 18"></polyline></svg>
-    </button>
+
   </div>
 
   <main>
@@ -102,56 +106,61 @@
 
   <!-- ===== 保存一覧ページ ===== -->
   <div id="listScreen" class="pageScreen" hidden>
-    <header class="pageHeader">
-      <span class="pageTitle">保存一覧</span>
-      <div class="headerActions">
-        <button id="exportBtn" class="iconBtn" type="button" aria-label="バックアップを書き出す" title="バックアップを書き出す（JSONファイル）">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"></path><polyline points="7 10 12 15 17 10"></polyline><path d="M4 19h16"></path></svg>
-        </button>
-        <button id="importBtn" class="iconBtn" type="button" aria-label="バックアップを読み込む" title="バックアップを読み込む（JSONファイル）">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3"></path><polyline points="7 8 12 3 17 8"></polyline><path d="M4 19h16"></path></svg>
-        </button>
-        <input id="importFileInput" type="file" accept="application/json,.json" hidden>
-        <button id="listNewBtn" class="iconBtn" type="button" aria-label="新規作成" title="新規作成">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-        </button>
-      </div>
-    </header>
+    <div class="pageTop">
+      <header class="pageHeader">
+        <span class="pageTitle">保存一覧</span>
+        <div class="headerActions">
+          <button id="exportBtn" class="iconBtn" type="button" aria-label="バックアップを書き出す" title="バックアップを書き出す（JSONファイル）">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"></path><polyline points="7 10 12 15 17 10"></polyline><path d="M4 19h16"></path></svg>
+          </button>
+          <button id="importBtn" class="iconBtn" type="button" aria-label="バックアップを読み込む" title="バックアップを読み込む（JSONファイル）">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3"></path><polyline points="7 8 12 3 17 8"></polyline><path d="M4 19h16"></path></svg>
+          </button>
+          <input id="importFileInput" type="file" accept="application/json,.json" hidden>
+          <button id="listNewBtn" class="iconBtn" type="button" aria-label="新規作成" title="新規作成">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+          </button>
+        </div>
+      </header>
+    </div>
     <div id="listRows"></div>
   </div>
 
   <!-- ===== 単語帳ページ ===== -->
   <div id="wordbookScreen" class="pageScreen" hidden>
-    <header class="pageHeader">
-      <div class="pageTitleWrap">
-        <span class="pageTitle">単語帳</span>
-        <span id="wordSelectCount"></span>
+    <div class="pageTop">
+      <header class="pageHeader">
+        <div class="pageTitleWrap">
+          <span class="pageTitle">単語帳</span>
+          <span id="wordSelectCount"></span>
+        </div>
+        <div class="headerActions">
+          <!-- 選択モードの間だけ、表示切り替えの代わりにこの3つを出す -->
+          <button id="wordMarkPersonBtn" class="iconBtn" type="button" aria-label="人名として登録" title="人名として登録" hidden disabled>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><line x1="20" y1="8" x2="20" y2="14"></line><line x1="23" y1="11" x2="17" y2="11"></line></svg>
+          </button>
+          <button id="wordUnmarkPersonBtn" class="iconBtn" type="button" aria-label="人名登録を解除" title="人名登録を解除" hidden disabled>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><line x1="23" y1="11" x2="17" y2="11"></line></svg>
+          </button>
+          <button id="wordDeleteBtn" class="iconBtn" type="button" aria-label="削除" title="削除" hidden disabled>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path></svg>
+          </button>
+          <div class="displayToggles"></div>
+        </div>
+      </header>
+      <div id="wordSortBar" class="segmented">
+        <span class="segThumb" aria-hidden="true"></span>
+        <button class="wordSortBtn" type="button" data-sort="registered">登録順</button>
+        <button class="wordSortBtn" type="button" data-sort="pinyin">ピンイン順</button>
+        <button class="wordSortBtn" type="button" data-sort="tone">声調順</button>
       </div>
-      <div class="headerActions">
-        <!-- 選択モードの間だけ、表示切り替えの代わりにこの3つを出す -->
-        <button id="wordMarkPersonBtn" class="iconBtn" type="button" aria-label="人名として登録" title="人名として登録" hidden disabled>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><line x1="20" y1="8" x2="20" y2="14"></line><line x1="23" y1="11" x2="17" y2="11"></line></svg>
+      <div id="wordAddBar">
+        <input id="wordAddInput" type="text" placeholder="単語を入力してEnterで登録（4文字まで）" maxlength="12" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="done" />
+        <button id="wordSelectToggleBtn" class="iconBtn" type="button" aria-label="選択" title="選択">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"></rect><polyline points="8 12 11 15 16 9"></polyline></svg>
+          <span class="iconBtnLabel">選択</span>
         </button>
-        <button id="wordUnmarkPersonBtn" class="iconBtn" type="button" aria-label="人名登録を解除" title="人名登録を解除" hidden disabled>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><line x1="23" y1="11" x2="17" y2="11"></line></svg>
-        </button>
-        <button id="wordDeleteBtn" class="iconBtn" type="button" aria-label="削除" title="削除" hidden disabled>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path></svg>
-        </button>
-        <div class="displayToggles"></div>
       </div>
-    </header>
-    <div id="wordSortBar">
-      <button class="wordSortBtn" type="button" data-sort="registered">登録順</button>
-      <button class="wordSortBtn" type="button" data-sort="pinyin">ピンイン順</button>
-      <button class="wordSortBtn" type="button" data-sort="tone">声調順</button>
-    </div>
-    <div id="wordAddBar">
-      <input id="wordAddInput" type="text" placeholder="単語を入力してEnterで登録（4文字まで）" maxlength="12" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="done" />
-      <button id="wordSelectToggleBtn" class="iconBtn" type="button" aria-label="選択" title="選択">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"></rect><polyline points="8 12 11 15 16 9"></polyline></svg>
-        <span class="iconBtnLabel">選択</span>
-      </button>
     </div>
     <div id="wordbookBody">
       <div id="wordGrid"></div>
@@ -165,12 +174,14 @@
 
   <!-- ===== 全漢字ページ ===== -->
   <div id="allKanjiScreen" class="pageScreen" hidden>
-    <header class="pageHeader">
-      <span class="pageTitle">全漢字</span>
-      <div class="displayToggles"></div>
-    </header>
-    <div id="allKanjiAddBar">
-      <input id="allKanjiAddInput" type="text" placeholder="文字を入力してEnterで漢字を登録" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="done" />
+    <div class="pageTop">
+      <header class="pageHeader">
+        <span class="pageTitle">全漢字</span>
+        <div class="displayToggles"></div>
+      </header>
+      <div id="allKanjiAddBar">
+        <input id="allKanjiAddInput" type="text" placeholder="文字を入力してEnterで漢字を登録" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="done" />
+      </div>
     </div>
     <div id="allKanjiBody">
       <div id="allKanjiGrid"></div>
@@ -256,6 +267,7 @@
   const wordbookIndex = document.getElementById('wordbookIndex');
   const wordScrollTopBtn = document.getElementById('wordScrollTopBtn');
   const wordSortBtns = Array.from(document.querySelectorAll('.wordSortBtn'));
+  const wordSortThumb = document.querySelector('#wordSortBar .segThumb');
 
   const allKanjiScreen = document.getElementById('allKanjiScreen');
   const allKanjiAddInput = document.getElementById('allKanjiAddInput');
@@ -531,8 +543,11 @@
   }
   // アプリを開いたときは常に登録順から始める（前回の並び順は引き継がない）
   let wordSortMode = 'registered';
+  // 並び替えのセグメントコントロール：選んだボタンの文字色を変え、つまみをその位置へすべらせる
   function updateWordSortBtnsUI() {
     wordSortBtns.forEach((btn) => btn.classList.toggle('active', btn.dataset.sort === wordSortMode));
+    const idx = wordSortBtns.findIndex((btn) => btn.dataset.sort === wordSortMode);
+    wordSortThumb.style.transform = 'translateX(' + (Math.max(0, idx) * 100) + '%)';
   }
   updateWordSortBtnsUI();
   function getSortedWords() {
@@ -1663,45 +1678,46 @@
     return empty;
   }
 
+  // iOSの「設定」アプリのように、角丸のカード（セクション）の中に行を並べる。
+  // 上のカード：新規フォルダ＋フォルダ（展開中はその下に中のファイル）、下のカード：フォルダに入っていないファイル
   function renderListRows() {
     listRows.innerHTML = '';
 
-    // フォルダ一覧（アコーディオン開閉）→ ルート直下のファイル
+    const folderSection = document.createElement('div');
+    folderSection.className = 'listSection';
     const newFolderBtn = document.createElement('button');
     newFolderBtn.type = 'button';
     newFolderBtn.className = 'newFolderRow';
     newFolderBtn.innerHTML = FOLDER_PLUS_SVG + '<span>新規フォルダ</span>';
     newFolderBtn.addEventListener('click', createFolderFlow);
-    listRows.appendChild(newFolderBtn);
+    folderSection.appendChild(newFolderBtn);
 
-    folders
-      .forEach((folder) => {
-        listRows.appendChild(makeFolderRow(folder));
-        if (!expandedFolders.has(folder.id)) return;
-        const body = document.createElement('div');
-        body.className = 'folderBody';
-        const inFolder = savedFiles.filter((f) => (f.folderId || null) === folder.id);
-        if (!inFolder.length) {
-          body.appendChild(emptyRow('このフォルダは空です'));
-        } else {
-          inFolder.forEach((file) => body.appendChild(makeListRow(file)));
-        }
-        listRows.appendChild(body);
-      });
+    folders.forEach((folder) => {
+      folderSection.appendChild(makeFolderRow(folder));
+      if (!expandedFolders.has(folder.id)) return;
+      const body = document.createElement('div');
+      body.className = 'folderBody';
+      const inFolder = savedFiles.filter((f) => (f.folderId || null) === folder.id);
+      if (!inFolder.length) {
+        body.appendChild(emptyRow('このフォルダは空です'));
+      } else {
+        inFolder.forEach((file) => body.appendChild(makeListRow(file)));
+      }
+      folderSection.appendChild(body);
+    });
+    listRows.appendChild(folderSection);
 
     const rootFiles = savedFiles
       .filter((f) => !f.folderId || !folders.some((d) => d.id === f.folderId));
-
-    if (folders.length && rootFiles.length) {
-      const div = document.createElement('div');
-      div.className = 'listSectionDivider';
-      listRows.appendChild(div);
-    }
     if (!folders.length && !rootFiles.length) {
       listRows.appendChild(emptyRow('保存された内容はまだありません'));
       return;
     }
-    rootFiles.forEach((file) => listRows.appendChild(makeListRow(file)));
+    if (!rootFiles.length) return;
+    const fileSection = document.createElement('div');
+    fileSection.className = 'listSection';
+    rootFiles.forEach((file) => fileSection.appendChild(makeListRow(file)));
+    listRows.appendChild(fileSection);
   }
 
   // 保存済みファイルを複製する。複製は元ファイルのすぐ後ろに挿入する
@@ -1784,6 +1800,10 @@
       openSaveModal({ mode: 'rename', fileId: file.id });
     });
     meta.appendChild(editBtn);
+    const chev = document.createElement('span');
+    chev.className = 'rowChevron';
+    chev.innerHTML = CHEVRON_SVG;
+    meta.appendChild(chev);
 
     row.appendChild(titleWrap);
     row.appendChild(meta);
@@ -2034,8 +2054,10 @@
       else dragScope.insertBefore(placeholder, others[others.length - 1].nextSibling);
     }
     function edgeAutoScroll(y) {
-      const lr = listRows.getBoundingClientRect();
-      autoDir = y < lr.top + 52 ? -1 : (y > lr.bottom - 52 ? 1 : 0);
+      // 一覧はヘッダーとタブバーの下まで広がっているので、実際に見えている範囲の上下端で判定する
+      const topEdge = listScreen.querySelector('.pageTop').getBoundingClientRect().bottom;
+      const bottomEdge = tabBar.getBoundingClientRect().top;
+      autoDir = y < topEdge + 52 ? -1 : (y > bottomEdge - 52 ? 1 : 0);
       if (autoDir && !rafId) rafId = requestAnimationFrame(scrollTick);
     }
     function scrollTick() {
@@ -2518,6 +2540,19 @@
   window.addEventListener('resize', syncAppHeight);
   window.addEventListener('orientationchange', syncAppHeight);
   if (window.visualViewport) window.visualViewport.addEventListener('resize', syncAppHeight);
+
+  // ================= 各ページ上部（ヘッダーなど）の高さをCSS変数へ反映 =================
+  // 上部は内容の上に重ねて表示している（すりガラスで後ろが透ける）ので、その高さを実測して
+  // ページごとに --top-h に入れ、スクロール領域の上余白にする。入力欄の高さが変わったときも追従する
+  document.querySelectorAll('.pageTop').forEach((top) => {
+    const host = top.parentElement;
+    const update = () => host.style.setProperty('--top-h', top.offsetHeight + 'px');
+    if (window.ResizeObserver) new ResizeObserver(update).observe(top);
+    update();
+  });
+
+  // iOSのSafariは、どこかにtouchstartの処理が無いとボタンを押している間の見た目（:active）を出さない
+  document.addEventListener('touchstart', () => {}, { passive: true });
 
   // ================= タブバーが占める高さをCSS変数へ反映 =================
   // env(safe-area-inset-bottom)を含む位置はブラウザ差が出やすいため、実際に描画された位置を測って

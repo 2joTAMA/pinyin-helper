@@ -4,9 +4,21 @@
   --ink-soft:#3b3833;
   --paper:#d9d0bd;
   --paper-dim:#93897a;
-  --input-bg:#c7bda7;
-  --input-bg-dim:#b6ac93;
-  --input-text:#2a2620;
+  /* 入力欄などの塗り（iOSのダークモードの入力欄と同じく、背景より少し明るいグレー） */
+  --input-bg:#4a463f;
+  --input-bg-dim:#57534b;
+  --input-text:var(--paper);
+  --placeholder:rgba(217,208,189,0.42);
+  /* 区切り線（iOSの細い実線） */
+  --sep:rgba(217,208,189,0.13);
+  /* すりガラス（タブバー・ヘッダー・シート・ダイアログ共通） */
+  --glass-bg:rgba(59,56,51,0.72);
+  --glass-blur:blur(20px) saturate(160%);
+  --glass-border:rgba(217,208,189,0.14);
+  /* 一覧のカードの背景 */
+  --card:#3b3833;
+  /* ボタンを押したときに少し縮んで、離すと弾んで戻る動き */
+  --press-spring:cubic-bezier(.3,1.6,.5,1);
   --seal:#c9704f;
   --seal-soft:#7a4433;
   --seal-dim:#573322;
@@ -18,7 +30,8 @@
   --footer-total-h:80px;
   /* 漢字の書体。同じ文字コードでも書体によって字形が違う（敏・偏など）ので、中国語の字形の書体を優先する。
      「日本漢字」表示のときだけ日本語の書体に切り替える（body.jaKanjiOn）。ボタンなどの日本語の文字は --font-ui のまま */
-  --font-ui:"Hiragino Sans","PingFang SC","Microsoft YaHei","Noto Sans CJK SC",sans-serif;
+  /* 英字（ピンインを含む）はiPhone標準のSF Pro、日本語はヒラギノで表示する */
+  --font-ui:-apple-system,BlinkMacSystemFont,"Hiragino Sans","PingFang SC","Microsoft YaHei","Noto Sans CJK SC",sans-serif;
   --font-zh:"PingFang SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans CJK SC","Source Han Sans SC",sans-serif;
   --font-ja:"Hiragino Sans","Hiragino Kaku Gothic ProN","Yu Gothic","Meiryo","Noto Sans CJK JP",sans-serif;
   --font-hanzi:var(--font-zh);
@@ -51,6 +64,22 @@ body{
   transform:translateZ(0);
 }
 button{ font:inherit; -webkit-appearance:none; appearance:none; cursor:pointer; }
+/* 押している間は少し縮み、離すと弾んで戻る（iOSの標準の触り心地） */
+button, .kcard, .wordChip{ transition:scale .35s var(--press-spring); }
+button:active, .kcard:active, .wordChip:active{ scale:0.96; transition-duration:.08s; }
+input::placeholder, textarea::placeholder{ color:var(--placeholder); }
+input, textarea{ caret-color:var(--seal); }
+
+/* ---------- 各ページの上部（ヘッダーなど）：内容の上に重ねるすりガラス ----------
+   スクロールする内容はこの下まで広がり、ぼかして透けて見える。上部の高さはJSが --top-h に入れる */
+.pageTop{
+  position:relative; z-index:20;
+  flex:0 0 auto;
+  background:var(--glass-bg);
+  -webkit-backdrop-filter:var(--glass-blur);
+  backdrop-filter:var(--glass-blur);
+  border-bottom:0.5px solid var(--sep);
+}
 
 /* ---------- 各ページ共通のヘッダー：左にページ名、右に表示切り替えなどのボタン ---------- */
 .pageHeader{
@@ -60,8 +89,6 @@ button{ font:inherit; -webkit-appearance:none; appearance:none; cursor:pointer; 
   min-height:52px;
   padding:6px 10px 6px 16px;
   padding-top:calc(6px + env(safe-area-inset-top));
-  border-bottom:1px solid var(--line);
-  background:var(--ink-soft);
 }
 .pageTitleWrap{ display:flex; align-items:baseline; gap:10px; min-width:0; }
 .pageTitle{ font-size:18px; font-weight:700; letter-spacing:0.5px; color:var(--paper); white-space:nowrap; }
@@ -78,31 +105,36 @@ button{ font:inherit; -webkit-appearance:none; appearance:none; cursor:pointer; 
 .iconBtn svg{ width:20px; height:20px; display:block; }
 
 /* ---------- 表示切り替え（声調カーブ／ピンインなし／日本字体）。入力・単語帳・全漢字のヘッダー右に同じものを置く ---------- */
-.displayToggles{ display:flex; align-items:center; gap:4px; flex:0 0 auto; }
+/* 3つのボタンを1つのカプセルにまとめる（iOS 26 のツールバーのボタンのまとめ方） */
+.displayToggles{
+  display:flex; align-items:center; gap:2px; flex:0 0 auto;
+  padding:3px;
+  border-radius:999px;
+  background:rgba(217,208,189,0.09);
+  border:0.5px solid var(--glass-border);
+}
 .displayToggles[hidden]{ display:none; }
 .dispToggle{
   display:flex; align-items:center; justify-content:center; gap:3px;
-  min-width:36px; height:32px;
+  min-width:36px; height:30px;
   padding:0 10px;
   background:transparent;
-  border:1px solid var(--line);
+  border:none;
   border-radius:999px;
   color:var(--paper-dim);
   font-size:12px; font-weight:700; line-height:1; white-space:nowrap;
 }
 .dispToggle svg{ width:15px; height:15px; display:block; flex:0 0 auto; }
-.dispToggle.active{ background:var(--seal); border-color:var(--seal); color:var(--ink); }
-/* 「日本漢字」はピンインの表示切り替えとは性格が違うので、押していないときも薄い水色にして区別する */
-.dispToggle[data-toggle="ja"]{ background:rgba(147,209,242,0.14); border-color:rgba(147,209,242,0.35); color:var(--ja-accent); }
-.dispToggle[data-toggle="ja"].active{ background:var(--ja-accent); border-color:var(--ja-accent); color:var(--ink); }
+.dispToggle.active{ background:var(--seal); color:var(--ink); }
+/* 「日本漢字」はピンインの表示切り替えとは性格が違うので、押していないときも背景だけ薄い水色にして区別する（文字色・枠は他のボタンと同じ） */
+.dispToggle[data-toggle="ja"]{ background:rgba(147,209,242,0.12); }
+.dispToggle[data-toggle="ja"].active{ background:var(--ja-accent); color:var(--ink); }
 
 /* ---------- 入力ページの2段目：ファイル名（左）と新規・保存（右） ---------- */
 #fileBar{
   flex:0 0 auto;
   display:flex; align-items:center; gap:6px;
-  padding:6px 10px 6px 16px;
-  border-bottom:1px solid var(--line);
-  background:var(--ink-soft);
+  padding:2px 10px 4px 16px;
 }
 #titleWrap{
   flex:1 1 auto; min-width:0;
@@ -128,7 +160,7 @@ button{ font:inherit; -webkit-appearance:none; appearance:none; cursor:pointer; 
   line-height:1;
   white-space:nowrap;
   flex:0 0 auto;
-  transition:background .2s, color .2s, border-color .2s;
+  transition:background .2s, color .2s, border-color .2s, scale .35s var(--press-spring);
 }
 #saveBtn:active{ background:var(--seal-soft); color:var(--paper); }
 #saveBtn svg{ width:12px; height:12px; display:block; }
@@ -146,10 +178,10 @@ button{ font:inherit; -webkit-appearance:none; appearance:none; cursor:pointer; 
   display:grid; grid-template-columns:repeat(4, 1fr);
   padding:4px;
   border-radius:999px;
-  background:rgba(59,56,51,0.6);
-  -webkit-backdrop-filter:blur(18px) saturate(160%);
-  backdrop-filter:blur(18px) saturate(160%);
-  border:1px solid rgba(217,208,189,0.14);
+  background:var(--glass-bg);
+  -webkit-backdrop-filter:var(--glass-blur);
+  backdrop-filter:var(--glass-blur);
+  border:0.5px solid var(--glass-border);
   box-shadow:0 10px 28px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.06);
 }
 .tabItem{
@@ -160,7 +192,7 @@ button{ font:inherit; -webkit-appearance:none; appearance:none; cursor:pointer; 
   background:none; border:none;
   color:var(--paper-dim);
   font-size:10px; font-weight:700; letter-spacing:0.2px;
-  transition:color .25s ease;
+  transition:color .25s ease, scale .35s var(--press-spring);
 }
 .tabItem svg{ width:22px; height:22px; display:block; }
 .tabItem.active{ color:var(--seal); }
@@ -177,9 +209,7 @@ button{ font:inherit; -webkit-appearance:none; appearance:none; cursor:pointer; 
 /* ---------- input ---------- */
 #inputWrap{
   flex:0 0 auto;
-  padding:8px 10px;
-  border-bottom:1px solid var(--line);
-  background:var(--ink-soft);
+  padding:4px 10px 10px;
   position:relative;
   overflow:visible;
   transition:padding .25s ease, height .25s ease, background-color .25s ease;
@@ -199,8 +229,8 @@ body.focusMode #inputWrap{
   background:var(--input-bg);
   color:var(--input-text);
   border:none;
-  border-radius:8px 8px 0 8px;
-  padding:9px 60px 9px 11px;
+  border-radius:12px 12px 0 12px;
+  padding:9px 60px 9px 12px;
   font-size:17px;
   line-height:1.4;
   font-family:var(--font-zh);
@@ -208,7 +238,7 @@ body.focusMode #inputWrap{
   overflow-y:auto;
   transition:max-height .25s ease, min-height .25s ease, opacity .2s ease, padding .25s ease;
 }
-#zhInput:focus{ outline:2px solid var(--seal); outline-offset:1px; }
+#zhInput:focus{ outline:none; }
 body.focusMode #zhInput{
   max-height:0; min-height:0;
   padding-top:0; padding-bottom:0;
@@ -217,7 +247,7 @@ body.focusMode #zhInput{
   pointer-events:none;
 }
 .inputTools{
-  position:absolute; top:16px; right:16px; display:flex; gap:6px;
+  position:absolute; top:12px; right:16px; display:flex; gap:6px;
   transition:opacity .2s ease;
 }
 body.focusMode .inputTools{ opacity:0; pointer-events:none; }
@@ -228,12 +258,12 @@ body.focusMode .inputTools{ opacity:0; pointer-events:none; }
   width:44px; height:20px;
   padding:0;
   border:none;
-  border-top:1px solid var(--line);
+  border-top:0.5px solid var(--sep);
   border-radius:0 0 10px 10px;
   background:var(--input-bg-dim);
   color:var(--input-text);
   box-shadow:0 3px 5px rgba(0,0,0,0.35);
-  transition:bottom .25s ease;
+  transition:bottom .25s ease, scale .35s var(--press-spring);
 }
 #focusToggle svg{ width:13px; height:13px; display:block; transition:transform .2s ease; }
 #focusToggle.active svg{ transform:rotate(180deg); }
@@ -241,7 +271,7 @@ body.focusMode .inputTools{ opacity:0; pointer-events:none; }
 body.focusMode #focusToggle{ bottom:-20px; }
 .miniBtn{
   width:22px; height:22px; border-radius:999px;
-  background:rgba(42,38,32,0.18);
+  background:rgba(217,208,189,0.14);
   border:none;
   display:flex; align-items:center; justify-content:center;
   color:var(--input-text);
@@ -253,20 +283,19 @@ body.focusMode #focusToggle{ bottom:-20px; }
 #clearBtn.show{ visibility:visible; }
 
 main{
-  flex:1 1 auto;
+  position:absolute; inset:0;
   display:flex; flex-direction:column;
-  min-height:0;
 }
 
 #results{
   flex:1 1 auto;
   overflow-y:auto;
   -webkit-overflow-scrolling:touch;
-  padding:10px 14px calc(16px + var(--footer-total-h));
+  padding:calc(var(--top-h, 0px) + 10px) 14px calc(16px + var(--footer-total-h));
 }
 .lineBlock{
   padding:10px 0;
-  border-bottom:1px dashed var(--line);
+  border-bottom:0.5px solid var(--sep);
 }
 .lineBlock:last-child{ border-bottom:none; }
 /* 入力で改行が2回以上続いた（空行をはさんだ）ところは、普通の改行より少し広くあける（何行空いても同じ幅） */
@@ -318,7 +347,7 @@ main{
 [data-tone="0"], [data-tone="5"]{ --tone-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 14'%3E%3Ccircle cx='10' cy='7' r='2.3' fill='black'/%3E%3C/svg%3E"); }
 
 /* ---------- 漢字カード（全漢字ページ） ---------- */
-.kgroup + .kgroup{ margin-top:14px; padding-top:12px; border-top:1px dashed var(--line); }
+.kgroup + .kgroup{ margin-top:14px; padding-top:12px; border-top:0.5px solid var(--sep); }
 .kgroupLabel{
   display:flex; align-items:center; gap:5px;
   font-size:16px; font-weight:700; color:var(--seal);
@@ -330,7 +359,7 @@ main{
   display:flex; align-items:center; justify-content:center;
   padding:3px 4px;
   border-radius:8px;
-  transition:background-color .15s ease;
+  transition:background-color .15s ease, scale .35s var(--press-spring);
 }
 .kcard.wordActive{ background:var(--seal-soft); }
 .khz{ font-size:27px; line-height:1; color:var(--paper); }
@@ -347,43 +376,42 @@ main{
 
 /* ---------- 全漢字ページで漢字をタップしたときの単語シート ---------- */
 #wordSheet{
-  position:fixed; left:0; right:0;
-  bottom:var(--footer-total-h);
+  position:fixed; left:8px; right:8px;
+  bottom:calc(var(--footer-total-h) + 6px);
   z-index:70;
-  background:var(--ink-soft);
-  border-top:1px solid var(--line);
-  border-radius:14px 14px 0 0;
-  box-shadow:0 -8px 24px rgba(0,0,0,0.4);
+  background:var(--glass-bg);
+  -webkit-backdrop-filter:var(--glass-blur);
+  backdrop-filter:var(--glass-blur);
+  border:0.5px solid var(--glass-border);
+  border-radius:30px;
+  box-shadow:0 -8px 30px rgba(0,0,0,0.45);
   max-height:45vh;
   display:flex; flex-direction:column;
   /* bottomをfooter分だけ底上げしているので、100%移動だけでは画面外まで届かない。
      その分(--footer-total-h)を余計に動かして確実に隠す */
-  transform:translateY(calc(100% + var(--footer-total-h)));
+  transform:translateY(calc(100% + var(--footer-total-h) + 20px));
   transition:transform .22s ease;
   pointer-events:none;
 }
 #wordSheet.open{ transform:translateY(0); pointer-events:auto; }
 /* タップした漢字が画面下半分にあるときは、隠れないよう上から出す */
 #wordSheet.fromTop{
-  top:0; bottom:auto;
-  border-radius:0 0 14px 14px;
-  box-shadow:0 8px 24px rgba(0,0,0,0.4);
-  padding-bottom:0;
-  padding-top:env(safe-area-inset-top);
-  transform:translateY(-100%);
+  top:calc(env(safe-area-inset-top) + 6px); bottom:auto;
+  box-shadow:0 8px 30px rgba(0,0,0,0.45);
+  transform:translateY(calc(-100% - env(safe-area-inset-top) - 20px));
 }
 #wordSheet.fromTop.open{ transform:translateY(0); }
 #wordSheet.fromTop .wordSheetHandle{ order:2; }
 #wordSheet.fromTop #wordSheetList{ order:1; }
 .wordSheetHandle{
-  width:36px; height:4px; border-radius:999px;
-  background:var(--line);
+  width:36px; height:5px; border-radius:999px;
+  background:rgba(217,208,189,0.3);
   margin:8px auto 4px;
   flex:0 0 auto;
 }
 #wordSheetList{
   overflow-y:auto;
-  padding:4px 18px 16px;
+  padding:6px 22px 18px;
   display:flex; flex-direction:column; gap:12px;
 }
 .wordSheetItem{ display:flex; align-items:baseline; gap:12px; }
@@ -407,31 +435,35 @@ main{
 /* ---------- save modal ---------- */
 .modalOverlay{
   position:fixed; inset:0; z-index:100;
-  background:rgba(0,0,0,0.55);
+  background:rgba(0,0,0,0.4);
   display:flex; align-items:center; justify-content:center;
   padding:0 28px;
 }
 .modalCard{
-  width:100%; max-width:340px;
-  background:var(--ink-soft); border:1px solid var(--line); border-radius:14px;
-  padding:20px 18px;
+  width:100%; max-width:320px;
+  background:var(--glass-bg);
+  -webkit-backdrop-filter:var(--glass-blur);
+  backdrop-filter:var(--glass-blur);
+  border:0.5px solid var(--glass-border);
+  border-radius:30px;
+  padding:22px 18px 18px;
   box-shadow:0 18px 40px rgba(0,0,0,0.5);
 }
-.modalTitle{ font-size:16px; font-weight:700; color:var(--paper); margin-bottom:14px; }
-.modalLabel{ font-size:12px; color:var(--paper-dim); margin-bottom:6px; }
+.modalTitle{ font-size:17px; font-weight:700; color:var(--paper); margin-bottom:14px; text-align:center; }
+.modalLabel{ font-size:12px; color:var(--paper-dim); margin-bottom:6px; padding-left:4px; }
 .modalInputWrap{ position:relative; }
 .modalInput{
   width:100%; background:var(--input-bg); color:var(--input-text);
-  border:none; border-radius:8px; padding:10px 34px 10px 12px;
-  font-size:15px; margin-bottom:6px;
+  border:none; border-radius:12px; padding:11px 34px 11px 12px;
+  font-size:16px; margin-bottom:6px;
   font-family:inherit;
 }
-.modalInput:focus{ outline:2px solid var(--seal); }
+.modalInput:focus{ outline:none; }
 .modalClearBtn{
   position:absolute; top:0; bottom:6px; right:8px;
   margin:auto 0;
   width:22px; height:22px; border-radius:999px;
-  background:rgba(42,38,32,0.18);
+  background:rgba(217,208,189,0.14);
   border:none;
   display:flex; align-items:center; justify-content:center;
   color:var(--input-text);
@@ -440,10 +472,12 @@ main{
 }
 .modalClearBtn.show{ visibility:visible; }
 .modalClearBtn svg{ width:12px; height:12px; display:block; }
-.modalHint{ font-size:11px; color:var(--paper-dim); margin-bottom:20px; }
-.modalActions{ display:flex; gap:10px; justify-content:flex-end; }
-.modalBtnGhost{ background:transparent; border:none; color:var(--paper-dim); font-size:14px; padding:10px 12px; }
-.modalBtnPrimary{ background:var(--seal); color:var(--ink); border:none; border-radius:8px; font-size:14px; font-weight:700; padding:10px 18px; }
+.modalHint{ font-size:11px; color:var(--paper-dim); margin-bottom:18px; padding-left:4px; }
+/* ボタンは横に並んだ同じ幅のカプセル（1つだけのときは横幅いっぱい） */
+.modalActions{ display:flex; gap:10px; }
+.modalActions > button{ flex:1 1 0; height:46px; border:none; border-radius:999px; font-size:16px; font-weight:600; }
+.modalBtnGhost{ background:rgba(217,208,189,0.14); color:var(--paper); }
+.modalBtnPrimary{ background:var(--seal); color:var(--ink); font-weight:700; }
 
 /* ---------- 全画面のページ（保存一覧・単語帳・全漢字）。入力ページの上に重ねて表示する ---------- */
 .pageScreen{
@@ -451,11 +485,26 @@ main{
   background:var(--ink);
   display:flex; flex-direction:column;
 }
+/* 上部（.pageTop）の下に重ねて、画面全体に広げるスクロール領域 */
+#listRows, #wordbookBody, #allKanjiBody{ position:absolute; inset:0; }
 
 /* ---------- 保存一覧ページ ---------- */
-#listRows{ flex:1 1 auto; overflow-y:auto; padding:2px 16px calc(16px + var(--footer-total-h)); }
+#listRows{ overflow-y:auto; padding:calc(var(--top-h, 0px) + 14px) 16px calc(16px + var(--footer-total-h)); }
 .listEmpty{ padding:40px 8px; text-align:center; color:var(--paper-dim); font-size:13px; }
-.listRowWrap{ position:relative; overflow:hidden; border-bottom:1px dashed var(--line); }
+.listSection{
+  background:var(--card);
+  border-radius:14px;
+  overflow:hidden;
+}
+.listSection + .listSection{ margin-top:20px; }
+/* 行と行の間の細い区切り線（左端は少し空けて、iOSの一覧と同じ見た目にする） */
+.listSection > *, .folderBody > *{ position:relative; }
+.listSection > * + *::before, .folderBody > * + *::before{
+  content:''; position:absolute; z-index:2; top:0; right:0; left:16px;
+  height:0.5px; background:var(--sep); pointer-events:none;
+}
+.folderBody > * + *::before{ left:40px; }
+.listRowWrap{ position:relative; overflow:hidden; }
 .listRowActions{ position:absolute; top:0; right:0; bottom:0; display:flex; }
 .rowActionBtn{
   width:64px; border:none; padding:0;
@@ -467,23 +516,24 @@ main{
 .actDuplicate{ background:var(--seal-soft); color:var(--paper); }
 .actDelete{ background:var(--seal); color:var(--ink); }
 .listRow{
-  position:relative; background:var(--ink);
+  position:relative; background:var(--card);
   display:flex; align-items:center; justify-content:space-between; gap:10px;
-  padding:12px 2px 12px 10px;
-  border-left:3px solid transparent;
+  min-height:48px;
+  padding:12px 10px 12px 16px;
   touch-action:pan-y;
   -webkit-touch-callout:none;
   -webkit-user-select:none; user-select:none;
 }
-.listRow.current{ background:var(--seal-dim); border-left-color:var(--seal); }
+.listRow.current{ background:var(--seal-dim); }
 .listRow.current .listTitle{ color:var(--seal); }
 .listTitle{
-  flex:1 1 auto; min-width:0; font-size:14px; font-weight:600; color:var(--paper);
+  flex:1 1 auto; min-width:0; font-size:15px; font-weight:500; color:var(--paper);
   white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
 }
 .listTitleWrap{ flex:1 1 auto; min-width:0; display:flex; flex-direction:column; gap:2px; }
 .listTitleWrap .listTitle{ flex:0 0 auto; }
-.listMeta{ flex:0 0 auto; display:flex; align-items:center; gap:8px; }
+.listMeta{ flex:0 0 auto; display:flex; align-items:center; gap:6px; }
+.rowChevron svg{ width:14px; height:14px; color:var(--paper-dim); opacity:0.7; display:block; }
 .listEditBtn{
   display:flex; align-items:center; justify-content:center;
   width:24px; height:24px; flex:0 0 auto;
@@ -502,8 +552,8 @@ main{
   box-shadow:0 12px 28px rgba(0,0,0,0.5);
 }
 .listRowWrap.rowDragging .listRow{
-  border:1px solid var(--seal); border-radius:10px;
-  background:var(--ink-soft);
+  border:1px solid var(--seal); border-radius:14px;
+  background:var(--card);
 }
 .listRowWrap.rowDragging .listRowActions{ display:none; }
 .listRowPlaceholder{
@@ -520,42 +570,52 @@ main{
 #wordSelectToggleBtn{ width:auto; height:auto; flex-direction:column; gap:1px; padding:6px 10px; flex:0 0 auto; }
 #wordSelectToggleBtn.active{ color:var(--seal); }
 .iconBtnLabel{ font-size:9px; font-weight:600; line-height:1; letter-spacing:0.2px; }
-#wordSortBar{
-  flex:0 0 auto;
-  display:flex; gap:6px;
-  padding:10px 16px 0;
+/* セグメントコントロール：1本のカプセルの中にボタンを並べ、選んだところへつまみがすべる */
+.segmented{
+  position:relative;
+  display:grid; grid-template-columns:repeat(3, 1fr);
+  margin:4px 16px 0;
+  padding:3px;
+  border-radius:999px;
+  background:var(--input-bg);
+}
+.segThumb{
+  position:absolute; top:3px; bottom:3px; left:3px;
+  width:calc((100% - 6px) / 3);
+  border-radius:999px;
+  background:rgba(217,208,189,0.24);
+  box-shadow:0 2px 8px rgba(0,0,0,0.3);
+  transition:transform .35s cubic-bezier(.3,1.25,.5,1);
+  pointer-events:none;
 }
 .wordSortBtn{
-  flex:1 1 0;
-  background:var(--ink-soft); color:var(--paper-dim);
-  border:1px solid var(--line); border-radius:8px;
-  padding:8px 4px;
-  font-size:13px; font-weight:700; text-align:center;
+  position:relative; z-index:1;
+  background:none; border:none; border-radius:999px;
+  color:var(--paper-dim);
+  padding:7px 4px;
+  font-size:13px; font-weight:600; text-align:center;
 }
-.wordSortBtn.active{ background:var(--seal-soft); border-color:var(--seal); color:var(--paper); }
-.wordSortBtn:active{ background:var(--line); }
+.wordSortBtn.active{ color:var(--paper); }
 #wordAddBar{
   flex:0 0 auto;
   display:flex; align-items:center; gap:8px;
-  padding:10px 16px 6px;
+  padding:10px 16px 10px;
 }
 #wordAddInput{
   flex:1 1 auto; min-width:0;
   background:var(--input-bg); color:var(--input-text);
-  border:none; border-radius:10px; padding:11px 12px;
-  font-size:15px; font-family:inherit;
+  border:none; border-radius:12px; padding:10px 12px;
+  font-size:16px; font-family:inherit;
 }
-#wordAddInput:focus{ outline:2px solid var(--seal); }
-#wordbookBody{
-  flex:1 1 auto;
-  min-height:0;
-  display:flex;
-}
+#wordAddInput:focus{ outline:none; }
+#wordbookBody{ display:flex; }
 #wordGrid{
   flex:1 1 auto; min-width:0; overflow-y:auto; overflow-x:hidden;
   display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:8px;
   /* 下余白は、タブバーの高さ＋「一番上に戻る」ボタンに最後の行が隠れない分 */
-  padding:10px 16px calc(64px + var(--footer-total-h));
+  padding:calc(var(--top-h, 0px) + 12px) 16px calc(64px + var(--footer-total-h));
+  /* 目次で見出しへジャンプしたとき、見出しが上部のすりガラスの下に隠れないようにする */
+  scroll-padding-top:var(--top-h, 0px);
   align-content:start;
 }
 /* ピンイン順／声調順のときだけ、グループ見出しを2列分の幅いっぱいに挟む */
@@ -564,7 +624,7 @@ main{
   font-size:13px; font-weight:700; color:var(--seal);
   letter-spacing:0.4px; text-transform:uppercase;
   padding-top:12px; margin-top:2px;
-  border-top:1px dashed var(--line);
+  border-top:0.5px solid var(--sep);
 }
 .wordGroupLabel:first-child{ padding-top:0; margin-top:0; border-top:none; }
 .wordChip{
@@ -576,8 +636,9 @@ main{
   z-index:0;
   min-width:0;
   min-height:68px;
-  background:var(--ink-soft); border:1px solid var(--line); border-radius:10px;
+  background:var(--card); border:0.5px solid var(--sep); border-radius:14px;
   padding:7px 5px;
+  transition:scale .35s var(--press-spring);
   display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px;
   text-align:center;
   -webkit-user-select:none; user-select:none;
@@ -635,10 +696,10 @@ main{
   width:40px; height:40px;
   padding:0;
   border-radius:999px;
-  background:rgba(59,56,51,0.6);
-  -webkit-backdrop-filter:blur(18px) saturate(160%);
-  backdrop-filter:blur(18px) saturate(160%);
-  border:1px solid rgba(217,208,189,0.14);
+  background:var(--glass-bg);
+  -webkit-backdrop-filter:var(--glass-blur);
+  backdrop-filter:var(--glass-blur);
+  border:0.5px solid var(--glass-border);
   box-shadow:0 6px 18px rgba(0,0,0,0.35);
   color:var(--paper);
 }
@@ -650,7 +711,7 @@ main{
   flex:0 0 auto;
   width:22px;
   display:flex; flex-direction:column; align-items:center; justify-content:space-between;
-  padding:16px 4px calc(16px + var(--footer-total-h));
+  padding:calc(var(--top-h, 0px) + 16px) 4px calc(16px + var(--footer-total-h));
   -webkit-user-select:none; user-select:none;
   touch-action:none;
 }
@@ -667,25 +728,22 @@ main{
 /* ---------- 全漢字画面（登録した漢字を常にピンインごとにグループ表示） ---------- */
 #allKanjiAddBar{
   flex:0 0 auto;
-  padding:10px 16px 6px;
+  padding:4px 16px 10px;
 }
 #allKanjiAddInput{
   width:100%; background:var(--input-bg); color:var(--input-text);
-  border:none; border-radius:10px; padding:11px 12px;
-  font-size:15px; font-family:inherit;
+  border:none; border-radius:12px; padding:10px 12px;
+  font-size:16px; font-family:inherit;
 }
-#allKanjiAddInput:focus{ outline:2px solid var(--seal); }
-#allKanjiBody{
-  flex:1 1 auto;
-  min-height:0;
-  display:flex;
-}
+#allKanjiAddInput:focus{ outline:none; }
+#allKanjiBody{ display:flex; }
 #allKanjiGrid{
   flex:1 1 auto;
   min-width:0;
   overflow-y:auto;
   -webkit-overflow-scrolling:touch;
-  padding:6px 16px calc(16px + var(--footer-total-h));
+  padding:calc(var(--top-h, 0px) + 8px) 16px calc(16px + var(--footer-total-h));
+  scroll-padding-top:var(--top-h, 0px);
 }
 /* 単語帳に登録単語が1つもない漢字＝タップしても何も起きないので、少し薄い色にして示す */
 .khz.noWord{ color:var(--paper-dim); }
@@ -697,7 +755,7 @@ main{
   flex:0 0 auto;
   width:22px;
   display:flex; flex-direction:column; align-items:center; justify-content:space-between;
-  padding:6px 4px calc(6px + var(--footer-total-h));
+  padding:calc(var(--top-h, 0px) + 6px) 4px calc(6px + var(--footer-total-h));
   -webkit-user-select:none; user-select:none;
   touch-action:none;
 }
@@ -714,12 +772,11 @@ main{
 .newFolderRow{
   display:flex; align-items:center; gap:8px; width:100%;
   background:transparent; border:none;
-  padding:12px 2px;
-  color:var(--seal); font-size:13px; font-weight:700;
-  border-bottom:1px dashed var(--line);
+  min-height:48px;
+  padding:12px 16px;
+  color:var(--seal); font-size:15px; font-weight:600;
 }
 .newFolderRow svg{ width:16px; height:16px; flex:0 0 auto; }
-.listSectionDivider{ height:10px; }
 
 .folderRow .listTitle{ display:flex; align-items:center; gap:8px; color:var(--paper); }
 .folderRow .listTitle svg{ width:17px; height:17px; color:var(--seal); flex:0 0 auto; }
@@ -729,20 +786,23 @@ main{
 .listRowWrap.expanded .folderChevron svg{ transform:rotate(90deg); }
 
 /* ---------- フォルダの中身（アコーディオン展開） ---------- */
-.folderBody{
-  padding-left:16px;
-  border-left:1px solid var(--line);
-  margin:0 0 4px 8px;
-}
+.folderBody{ background:rgba(0,0,0,0.12); }
+.folderBody .listRow{ background:#37342f; padding-left:40px; }
+.folderBody .listRow.current{ background:var(--seal-dim); }
+.folderBody .listEmpty{ padding:14px 16px 14px 40px; text-align:left; }
 
-#folderPickerList{ max-height:50vh; overflow-y:auto; margin-bottom:16px; }
+#folderPickerList{
+  max-height:50vh; overflow-y:auto; margin-bottom:16px;
+  background:rgba(217,208,189,0.07);
+  border-radius:16px;
+}
 .folderPickItem{
   display:flex; align-items:center; gap:10px; width:100%;
   background:transparent; border:none;
-  padding:12px 6px;
-  color:var(--paper); font-size:14px; text-align:left;
-  border-bottom:1px dashed var(--line);
+  padding:13px 14px;
+  color:var(--paper); font-size:15px; text-align:left;
 }
+.folderPickItem + .folderPickItem{ border-top:0.5px solid var(--sep); }
 .folderPickItem > svg{ width:16px; height:16px; color:var(--seal); flex:0 0 auto; }
 .folderPickItem > span{ flex:1 1 auto; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .folderPickItem.active{ color:var(--seal); font-weight:700; }
