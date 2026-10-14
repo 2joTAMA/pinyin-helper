@@ -135,6 +135,7 @@
           <span id="wordSelectCount"></span>
         </div>
         <div class="headerActions">
+          <button id="wordSelectToggleBtn" class="textBtn" type="button" aria-pressed="false">選択</button>
           <!-- 選択モードの間だけ、表示切り替えの代わりにこの3つを出す -->
           <button id="wordMarkPersonBtn" class="iconBtn" type="button" aria-label="人名として登録" title="人名として登録" hidden disabled>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><line x1="20" y1="8" x2="20" y2="14"></line><line x1="23" y1="11" x2="17" y2="11"></line></svg>
@@ -154,12 +155,12 @@
         <button class="wordSortBtn" type="button" data-sort="pinyin">ピンイン順</button>
         <button class="wordSortBtn" type="button" data-sort="tone">声調順</button>
       </div>
-      <div id="wordAddBar">
-        <input id="wordAddInput" type="text" placeholder="単語を入力してEnterで登録（4文字まで）" maxlength="12" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="done" />
-        <button id="wordSelectToggleBtn" class="iconBtn" type="button" aria-label="選択" title="選択">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"></rect><polyline points="8 12 11 15 16 9"></polyline></svg>
-          <span class="iconBtnLabel">選択</span>
-        </button>
+      <div id="wordAddBar" class="searchRow">
+        <input id="wordAddInput" class="pillField" type="text" placeholder="単語を入力してEnterで登録（4文字まで）" maxlength="12" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="done" />
+          <!-- 入力中だけ右に出る「すべて消す」ボタン（iOSの検索バーと同じ動き） -->
+          <button id="wordAddClearBtn" class="fieldClearBtn" type="button" aria-label="入力をすべて消す" title="入力をすべて消す" tabindex="-1">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"></line><line x1="18" y1="6" x2="6" y2="18"></line></svg>
+          </button>
       </div>
     </div>
     <div id="wordbookBody">
@@ -179,8 +180,12 @@
         <span class="pageTitle">全漢字</span>
         <div class="displayToggles"></div>
       </header>
-      <div id="allKanjiAddBar">
-        <input id="allKanjiAddInput" type="text" placeholder="文字を入力してEnterで漢字を登録" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="done" />
+      <div id="allKanjiAddBar" class="searchRow">
+        <input id="allKanjiAddInput" class="pillField" type="text" placeholder="文字を入力してEnterで漢字を登録" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="done" />
+          <!-- 入力中だけ右に出る「すべて消す」ボタン（iOSの検索バーと同じ動き） -->
+          <button id="allKanjiAddClearBtn" class="fieldClearBtn" type="button" aria-label="入力をすべて消す" title="入力をすべて消す" tabindex="-1">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"></line><line x1="18" y1="6" x2="6" y2="18"></line></svg>
+          </button>
       </div>
     </div>
     <div id="allKanjiBody">
@@ -258,6 +263,8 @@
   const wordbookScreen = document.getElementById('wordbookScreen');
   const wordbookDisplayToggles = wordbookScreen.querySelector('.displayToggles');
   const wordSelectToggleBtn = document.getElementById('wordSelectToggleBtn');
+  const wordAddClearBtn = document.getElementById('wordAddClearBtn');
+  const allKanjiAddClearBtn = document.getElementById('allKanjiAddClearBtn');
   const wordMarkPersonBtn = document.getElementById('wordMarkPersonBtn');
   const wordUnmarkPersonBtn = document.getElementById('wordUnmarkPersonBtn');
   const wordDeleteBtn = document.getElementById('wordDeleteBtn');
@@ -2232,6 +2239,7 @@
   function updateWordSelectUI() {
     wordSelectToggleBtn.classList.toggle('active', wordSelectMode);
     wordSelectToggleBtn.setAttribute('aria-pressed', wordSelectMode ? 'true' : 'false');
+    wordSelectToggleBtn.textContent = wordSelectMode ? '完了' : '選択';
     wordMarkPersonBtn.hidden = !wordSelectMode;
     wordMarkPersonBtn.disabled = selectedWords.size === 0;
     wordUnmarkPersonBtn.hidden = !wordSelectMode;
@@ -2468,6 +2476,16 @@
     addAllKanji(allKanjiAddInput.value);
     allKanjiAddInput.value = '';
     renderAllKanjiGrid();
+  });
+
+  // 入力バーの右に出る「すべて消す」ボタン。普通にクリックで処理すると、押した瞬間に入力欄から
+  // フォーカスが外れてボタン自体が引っ込んでしまうので、押し始め（pointerdown）で処理してフォーカスを保つ
+  [[wordAddClearBtn, wordAddInput], [allKanjiAddClearBtn, allKanjiAddInput]].forEach(([btn, field]) => {
+    btn.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      field.value = '';
+      field.focus();
+    });
   });
 
   wordSelectToggleBtn.addEventListener('click', () => {

@@ -75,10 +75,10 @@ input, textarea{ caret-color:var(--seal); }
 .pageTop{
   position:relative; z-index:20;
   flex:0 0 auto;
-  background:var(--glass-bg);
-  -webkit-backdrop-filter:var(--glass-blur);
-  backdrop-filter:var(--glass-blur);
-  border-bottom:0.5px solid var(--sep);
+  /* 区切り線は付けず、タブバーより薄めの色・弱めのぼかしにして後ろの内容がしっかり透けるようにする */
+  background:rgba(50,48,43,0.5);
+  -webkit-backdrop-filter:blur(10px) saturate(150%);
+  backdrop-filter:blur(10px) saturate(150%);
 }
 
 /* ---------- 各ページ共通のヘッダー：左にページ名、右に表示切り替えなどのボタン ---------- */
@@ -479,6 +479,28 @@ main{
 .modalBtnGhost{ background:rgba(217,208,189,0.14); color:var(--paper); }
 .modalBtnPrimary{ background:var(--seal); color:var(--ink); font-weight:700; }
 
+/* ---------- 単語帳・全漢字の入力バー（iOSの検索バーと同じ形と動き） ----------
+   普段は全幅のカプセル。入力中（フォーカス中）は右端が縮んで、空いた所に丸い「すべて消す」ボタンが出る */
+.searchRow{ flex:0 0 auto; display:flex; align-items:center; }
+.pillField{
+  flex:1 1 auto; min-width:0;
+  background:var(--input-bg); color:var(--input-text);
+  border:none; border-radius:999px; padding:10px 16px;
+  font-size:16px; font-family:inherit;
+}
+.pillField:focus{ outline:none; }
+.fieldClearBtn{
+  flex:0 0 auto;
+  display:flex; align-items:center; justify-content:center;
+  width:0; height:40px; margin-left:0;
+  padding:0; border:none; border-radius:999px;
+  background:var(--input-bg); color:var(--paper);
+  opacity:0; overflow:hidden; pointer-events:none;
+  transition:width .28s cubic-bezier(.3,1.1,.5,1), margin-left .28s cubic-bezier(.3,1.1,.5,1), opacity .2s ease, scale .35s var(--press-spring);
+}
+.fieldClearBtn svg{ width:16px; height:16px; display:block; flex:0 0 auto; }
+.searchRow:focus-within .fieldClearBtn{ width:40px; margin-left:8px; opacity:1; pointer-events:auto; }
+
 /* ---------- 全画面のページ（保存一覧・単語帳・全漢字）。入力ページの上に重ねて表示する ---------- */
 .pageScreen{
   position:fixed; inset:0; z-index:50;
@@ -567,9 +589,17 @@ main{
 /* 選択中の件数はタイトルの横に出す */
 #wordSelectCount{ font-size:12px; color:var(--paper-dim); white-space:nowrap; }
 #wordSelectCount:empty{ display:none; }
-#wordSelectToggleBtn{ width:auto; height:auto; flex-direction:column; gap:1px; padding:6px 10px; flex:0 0 auto; }
-#wordSelectToggleBtn.active{ color:var(--seal); }
-.iconBtnLabel{ font-size:9px; font-weight:600; line-height:1; letter-spacing:0.2px; }
+/* 文字だけのボタン（単語帳の「選択」／選択中は「完了」） */
+.textBtn{
+  flex:0 0 auto;
+  height:32px; padding:0 8px;
+  background:none; border:none;
+  color:var(--paper-dim);
+  font-size:14px; font-weight:600;
+  white-space:nowrap;
+}
+.textBtn.active{ color:var(--seal); font-weight:700; }
+#wordbookScreen .headerActions{ gap:4px; }
 /* セグメントコントロール：1本のカプセルの中にボタンを並べ、選んだところへつまみがすべる */
 .segmented{
   position:relative;
@@ -596,18 +626,7 @@ main{
   font-size:13px; font-weight:600; text-align:center;
 }
 .wordSortBtn.active{ color:var(--paper); }
-#wordAddBar{
-  flex:0 0 auto;
-  display:flex; align-items:center; gap:8px;
-  padding:10px 16px 10px;
-}
-#wordAddInput{
-  flex:1 1 auto; min-width:0;
-  background:var(--input-bg); color:var(--input-text);
-  border:none; border-radius:12px; padding:10px 12px;
-  font-size:16px; font-family:inherit;
-}
-#wordAddInput:focus{ outline:none; }
+#wordAddBar{ padding:10px 16px 10px; }
 #wordbookBody{ display:flex; }
 #wordGrid{
   flex:1 1 auto; min-width:0; overflow-y:auto; overflow-x:hidden;
@@ -726,16 +745,7 @@ main{
 .wordbookIndexItem.active{ background:var(--seal-soft); color:var(--paper); }
 
 /* ---------- 全漢字画面（登録した漢字を常にピンインごとにグループ表示） ---------- */
-#allKanjiAddBar{
-  flex:0 0 auto;
-  padding:4px 16px 10px;
-}
-#allKanjiAddInput{
-  width:100%; background:var(--input-bg); color:var(--input-text);
-  border:none; border-radius:12px; padding:10px 12px;
-  font-size:16px; font-family:inherit;
-}
-#allKanjiAddInput:focus{ outline:none; }
+#allKanjiAddBar{ padding:4px 16px 10px; }
 #allKanjiBody{ display:flex; }
 #allKanjiGrid{
   flex:1 1 auto;
