@@ -134,7 +134,8 @@ input, textarea{ caret-color:var(--seal); }
   background:rgba(217,208,189,0.09);
   border:0.5px solid var(--glass-border);
 }
-.dangerPill{ color:var(--warn); }
+/* 背景に沈まないよう、明るめの赤の文字に赤みのある背景を合わせる（iOSのダークモードの削除の赤に近い色） */
+.pillGroup.dangerPill{ color:#ff8577; background:rgba(255,69,58,0.2); border-color:rgba(255,105,90,0.4); }
 .dangerPill[disabled]{ opacity:0.4; }
 .dispToggle.active{ background:var(--seal); color:var(--ink); }
 /* 「日本漢字」はピンインの表示切り替えとは性格が違うので、押していないときも背景だけ薄い水色にして区別する（文字色・枠は他のボタンと同じ） */
