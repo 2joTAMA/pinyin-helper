@@ -688,7 +688,7 @@
   .wordChipPersonIcon svg{ width:100%; height:100%; display:block; }
   .wordChipHz{ font-size:20px; font-weight:600; color:var(--paper); letter-spacing:1px; }
   /* 声調123／記号表記を切り替えても縦幅が動かないよう高さを固定し、1行に収まる幅まで
-     JS(fitWordChipPy)が自動で文字サイズを縮める。それでも収まらなければ省略記号で切る。
+     JS(fitAllWordChipPy)が自動で文字サイズを縮める。それでも収まらなければ省略記号で切る。
      min-width:0とoverflow:hiddenがないと、white-space:nowrapの中身の最小幅がグリッドの
      列幅を押し広げてしまい、画面全体が横スクロールしてしまうので必須。 */
   .wordChipPy{
@@ -1350,6 +1350,30 @@
   let typingTimer = null;
   let burstStartValue = '';
 
+  // ================= 変換結果のキャッシュ =================
+  // pinyin-proの変換は1回なら速いが、単語帳の描画・並び替えでは同じ単語を何千回も変換することになるので、
+  // 結果を覚えておく（読みは単語と表記の種類だけで決まり、途中で変わらない）。
+  // 入力欄の文章も通るので、件数が増えすぎたら丸ごと捨てて作り直す。
+  // 返す配列・オブジェクトは共有されるので、呼び出し側で書き換えないこと。
+  const CACHE_LIMIT = 20000;
+  function memo(map, key, compute) {
+    if (map.has(key)) return map.get(key);
+    const value = compute();
+    if (map.size >= CACHE_LIMIT) map.clear();
+    map.set(key, value);
+    return value;
+  }
+  const segmentCache = new Map();
+  // textを単語区切りつきで変換した結果（pp.segmentのAllArray形式）。失敗したら[]
+  function segmentCached(text, toneType) {
+    return memo(segmentCache, toneType + '\u0000' + text, () => {
+      if (!pp || !pp.segment) return [];
+      try {
+        return pp.segment(text, { format: pp.OutputFormat.AllArray, toneType: toneType });
+      } catch (e) { return []; }
+    });
+  }
+
   // ================= pinyin table order (ju/qu/xu のような並び用) =================
   const INITIAL_LIST = ['zh','ch','sh','b','p','m','f','d','t','n','l','g','k','h','j','q','x','r','z','c','s','y','w'];
   const INITIAL_ORDER = ['b','p','m','f','d','t','n','l','g','k','h','j','q','x','zh','ch','sh','r','z','c','s','y','w',''];
@@ -1392,8 +1416,9 @@
 
   // ================= 単語帳の並び替え（登録順／ピンイン順／声調順） =================
   // ピンイン順：単語を音節ごとにINITIAL_ORDER/FINAL_ORDERの表（あいうえお順相当）で比較する
+  const pinyinRanksCache = new Map();
   function pinyinRanksForWord(word) {
-    return Array.from(word).map((ch) => pinyinGroupRank(getBasePinyin(ch)));
+    return memo(pinyinRanksCache, word, () => Array.from(word).map((ch) => pinyinGroupRank(getBasePinyin(ch))));
   }
   function comparePinyinWords(a, b) {
     const ra = pinyinRanksForWord(a);
@@ -1411,10 +1436,7 @@
   // その単語として実際に読まれる声調（変調・軽声を含む）で比較する。
   function getWordToneDigits(word) {
     if (!pp || !pp.segment) return Array.from(word).map(() => '');
-    let groups = [];
-    try {
-      groups = pp.segment(word, { format: pp.OutputFormat.AllArray, toneType: 'num' });
-    } catch (e) { groups = []; }
+    const groups = segmentCached(word, 'num');
     const chars = groups.length
       ? groups.reduce((acc, g) => acc.concat(g), [])
       : Array.from(word).map((c) => ({ result: c }));
@@ -1436,9 +1458,12 @@
     return idx >= 0 ? idx : TONE_GROUP_ORDER.length;
   }
   // 1文字だけの単語は2文字目の声調が存在しないので''のまま返す（呼び出し側で個別に扱う）
+  const wordToneGroupCache = new Map();
   function wordToneGroupDigits(word) {
-    const digits = getWordToneDigits(word).map(normalizeToneDigit);
-    return [digits[0] || '', digits[1] || ''];
+    return memo(wordToneGroupCache, word, () => {
+      const digits = getWordToneDigits(word).map(normalizeToneDigit);
+      return [digits[0] || '', digits[1] || ''];
+    });
   }
   function compareToneWords(a, b) {
     const [a1, a2] = wordToneGroupDigits(a);
@@ -1463,36 +1488,34 @@
   }
 
   // ================= pinyin lookup helpers =================
+  const basePinyinCache = new Map();
   function getBasePinyin(ch) {
-    if (!pp || !pp.pinyin) return '';
-    try { return pp.pinyin(ch, { toneType: 'none', multiple: false }) || ''; } catch (e) { return ''; }
+    return memo(basePinyinCache, ch, () => {
+      if (!pp || !pp.pinyin) return '';
+      try { return pp.pinyin(ch, { toneType: 'none', multiple: false }) || ''; } catch (e) { return ''; }
+    });
   }
   // 声調の数字1文字だけ取り出す（単漢字モードで123トグルON時に使う）
+  const toneDigitCache = new Map();
   function getToneDigit(ch) {
-    if (!pp || !pp.pinyin) return '';
-    try {
-      const withNum = pp.pinyin(ch, { toneType: 'num', multiple: false }) || '';
-      // pinyin-proは軽声を末尾「0」で表す（「5」ではない）ので両方拾う
-      const m = withNum.match(/([0-5])$/);
-      return m ? m[1] : '';
-    } catch (e) { return ''; }
+    return memo(toneDigitCache, ch, () => {
+      if (!pp || !pp.pinyin) return '';
+      try {
+        const withNum = pp.pinyin(ch, { toneType: 'num', multiple: false }) || '';
+        // pinyin-proは軽声を末尾「0」で表す（「5」ではない）ので両方拾う
+        const m = withNum.match(/([0-5])$/);
+        return m ? m[1] : '';
+      } catch (e) { return ''; }
+    });
   }
   // 単語の中で各漢字が実際にどう読まれているか（声調なしの音と声調番号）。単語ごとに結果をキャッシュする
   const wordReadingCache = new Map();
   function getWordCharReadings(word) {
-    if (wordReadingCache.has(word)) return wordReadingCache.get(word);
-    let list = [];
-    if (pp && pp.segment) {
-      try {
-        const groups = pp.segment(word, { format: pp.OutputFormat.AllArray, toneType: 'num' });
-        list = groups.reduce((acc, g) => acc.concat(g), []).map(({ origin, result }) => {
-          const m = /^(.*?)([0-5])?$/.exec(result || '');
-          return { ch: origin, base: m[1], tone: normalizeToneDigit(m[2] || '') };
-        });
-      } catch (e) { list = []; }
-    }
-    wordReadingCache.set(word, list);
-    return list;
+    return memo(wordReadingCache, word, () =>
+      segmentCached(word, 'num').reduce((acc, g) => acc.concat(g), []).map(({ origin, result }) => {
+        const m = /^(.*?)([0-5])?$/.exec(result || '');
+        return { ch: origin, base: m[1], tone: normalizeToneDigit(m[2] || '') };
+      }));
   }
   // 漢字の読みを「声調なしの音 → 代表の声調」のMapで返す（全漢字ページ用）。
   // 標準の読み（pinyin-proの多音字リストの先頭。1文字単独での変換だと「了」がliǎoになるため使わない）は
@@ -1522,8 +1545,7 @@
     };
     if (standardBase) add(standardBase, '');
     else add(getBasePinyin(ch), normalizeToneDigit(getToneDigit(ch)));
-    savedWords.forEach((w) => {
-      if (w.indexOf(ch) < 0) return;
+    wordsContaining(ch).forEach((w) => {
       getWordCharReadings(w).forEach((r) => { if (r.ch === ch) add(r.base, r.tone); });
     });
     return readings;
@@ -1537,13 +1559,27 @@
     }
     return charFreqRankMap.has(ch) ? charFreqRankMap.get(ch) : charFreqRankMap.size;
   }
+  // 漢字 → その漢字を含む登録単語の一覧（単語帳と同じ並び）の索引。
+  // 全漢字ページでは漢字1字ごとに引くので、毎回全単語を調べずに済むよう一度だけ作る。
+  // 単語帳が変わったら（persistWords）捨てて、次に使うときに作り直す。
+  let wordsByCharIndex = null;
+  function wordsContaining(ch) {
+    if (!wordsByCharIndex) {
+      wordsByCharIndex = new Map();
+      savedWords.forEach((w) => {
+        new Set(w).forEach((c) => {
+          if (!wordsByCharIndex.has(c)) wordsByCharIndex.set(c, []);
+          wordsByCharIndex.get(c).push(w);
+        });
+      });
+    }
+    return wordsByCharIndex.get(ch) || [];
+  }
   // その漢字を含む単語のうち、base指定時はその漢字がbaseの音で読まれている単語だけを返す
   function wordsForChar(ch, base) {
-    return savedWords.filter((w) => {
-      if (w.indexOf(ch) < 0) return false;
-      if (!base) return true;
-      return getWordCharReadings(w).some((r) => r.ch === ch && r.base === base);
-    });
+    const list = wordsContaining(ch);
+    if (!base) return list;
+    return list.filter((w) => getWordCharReadings(w).some((r) => r.ch === ch && r.base === base));
   }
   // 声調番号を高低カーブのSVG記号に変換する（contourモード用。軽声(0または5)は点で表す）
   // 1声=上の水平線／2声=45度の右肩上がり／3声=ピンインのˇと同じV字（下がって上がる）／4声=45度の右肩下がり
@@ -1567,25 +1603,14 @@
   // 単語区切りを考慮してピンインを組み立てる（単語内はくっつけ、単語間はスペース）
   function lineToPinyin(normalizedLine) {
     if (!pp || !pp.segment) return '';
-    let groups;
-    try {
-      groups = pp.segment(normalizedLine, { format: pp.OutputFormat.AllArray, toneType: state.toneType });
-    } catch (e) {
-      return '';
-    }
-    return groups
+    return segmentCached(normalizedLine, state.toneType)
       .map((group) => group.map((g) => g.result).join(''))
       .join(' ');
   }
 
   // 漢字1文字ずつの下にその声調カーブSVGを揃えて配置する行を作る（アルファベット非表示のとき共通で使う）
   function appendContourCols(row, text) {
-    let groups = [];
-    if (pp && pp.segment) {
-      try {
-        groups = pp.segment(text, { format: pp.OutputFormat.AllArray, toneType: 'num' });
-      } catch (e) { groups = []; }
-    }
+    const groups = segmentCached(text, 'num');
     const chars = groups.length
       ? groups.reduce((acc, g) => acc.concat(g), [])
       : Array.from(text).map((c) => ({ origin: c, result: c }));
@@ -2381,6 +2406,7 @@
     } catch (e) { return []; }
   }
   function persistWords() {
+    wordsByCharIndex = null;
     try { localStorage.setItem(WORDS_KEY, JSON.stringify(savedWords)); } catch (e) { /* noop */ }
   }
   let savedWords = loadWords(); // 新しく登録した単語が先頭
@@ -3557,19 +3583,34 @@
   // 声調123／記号表記を切り替えても行の高さが動かないよう、ピンインが1行に収まるまで
   // 文字サイズを少しずつ縮める（最小サイズでも収まらなければCSSの省略記号に任せる）。
   // 描画直後はまだ画面が非表示のことがあるので、確実に幅が測れるよう次フレームで実行する。
-  function fitWordChipPy(el) {
-    el.style.fontSize = '';
-    const maxWidth = el.clientWidth;
-    if (!maxWidth) return;
-    let fontSize = 19;
-    while (el.scrollWidth > maxWidth + 0.5 && fontSize > 12) {
-      fontSize -= 1;
-      el.style.fontSize = fontSize + 'px';
-    }
-  }
+  // カード1枚ずつ「縮める→測る」を繰り返すと、そのたびにブラウザが画面全体の配置を計算し直して
+  // 単語が多いと数秒かかるので、全カードをまとめて測る→まとめて縮める、を交互に行う。
+  // 最初の縮小幅は「収まる幅 ÷ 今の幅」の比で見積もる（字間の分だけ必ず大きめに出るので、
+  // そこから1pxずつ下げれば、1pxずつ縮めていたときと同じ大きさに落ち着く）。
+  const WORD_CHIP_PY_MAX_PX = 19;
+  const WORD_CHIP_PY_MIN_PX = 12;
   function fitAllWordChipPy() {
     requestAnimationFrame(() => {
-      wordGrid.querySelectorAll('.wordChipPy').forEach(fitWordChipPy);
+      const els = Array.from(wordGrid.querySelectorAll('.wordChipPy')).filter((el) => el.textContent);
+      els.forEach((el) => { el.style.fontSize = ''; });
+      // 測る（ここで1回だけ配置が計算される）
+      let pending = els
+        .map((el) => ({ el, maxWidth: el.clientWidth, width: el.scrollWidth, size: WORD_CHIP_PY_MAX_PX }))
+        .filter((p) => p.maxWidth && p.width > p.maxWidth + 0.5);
+      // 縮める
+      pending.forEach((p) => {
+        const estimate = Math.floor(WORD_CHIP_PY_MAX_PX * p.maxWidth / p.width);
+        p.size = Math.max(WORD_CHIP_PY_MIN_PX, Math.min(WORD_CHIP_PY_MAX_PX - 1, estimate));
+        p.el.style.fontSize = p.size + 'px';
+      });
+      // まだはみ出しているものだけ、1pxずつ下げて測り直す
+      while (pending.length) {
+        pending = pending.filter((p) => p.size > WORD_CHIP_PY_MIN_PX && p.el.scrollWidth > p.maxWidth + 0.5);
+        pending.forEach((p) => {
+          p.size -= 1;
+          p.el.style.fontSize = p.size + 'px';
+        });
+      }
     });
   }
 
