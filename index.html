@@ -26,10 +26,8 @@
     --warn:#e2574c;
     --ja-accent:#93d1f2;
     --ja-accent-dim:#7e93a1;
-    --footer-h:48px;
-    /* 以下2つは起動時にJS(syncFooterOffsets)が実測値で上書きする。ここでの値は読み込み直後の暫定値 */
-    --toolfooter-h:48px;
-    --footer-total-h:96px;
+    /* 画面下端からタブバー上端までの高さ。起動時にJS(syncFooterOffsets)が実測値で上書きする。ここでの値は読み込み直後の暫定値 */
+    --footer-total-h:80px;
   }
   *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
   [hidden]{ display:none !important; }
@@ -57,17 +55,20 @@
   }
   button{ font:inherit; -webkit-appearance:none; appearance:none; cursor:pointer; }
 
-  /* ---------- header ---------- */
-  #topHeader{
+  /* ---------- 各ページ共通のヘッダー：左にページ名、右に表示切り替えなどのボタン ---------- */
+  .pageHeader{
     flex:0 0 auto;
     display:flex; align-items:center; justify-content:space-between;
     gap:8px;
-    padding:8px 10px;
-    padding-top:calc(8px + env(safe-area-inset-top));
+    min-height:52px;
+    padding:6px 10px 6px 16px;
+    padding-top:calc(6px + env(safe-area-inset-top));
     border-bottom:1px solid var(--line);
     background:var(--ink-soft);
   }
-  .brand{ font-size:14px; font-weight:600; letter-spacing:1px; color:var(--paper-dim); }
+  .pageTitleWrap{ display:flex; align-items:baseline; gap:10px; min-width:0; }
+  .pageTitle{ font-size:18px; font-weight:700; letter-spacing:0.5px; color:var(--paper); white-space:nowrap; }
+  .headerActions{ display:flex; align-items:center; gap:2px; flex:0 0 auto; }
   .iconBtn{
     display:flex; align-items:center; justify-content:center;
     width:36px; height:36px;
@@ -78,17 +79,45 @@
   }
   .iconBtn:active{ background:rgba(217,208,189,0.12); }
   .iconBtn svg{ width:20px; height:20px; display:block; }
+
+  /* ---------- 表示切り替え（声調カーブ／ピンインなし／日本字体）。入力・単語帳・全漢字のヘッダー右に同じものを置く ---------- */
+  .displayToggles{ display:flex; align-items:center; gap:4px; flex:0 0 auto; }
+  .displayToggles[hidden]{ display:none; }
+  .dispToggle{
+    display:flex; align-items:center; justify-content:center;
+    min-width:36px; height:32px;
+    padding:0 6px;
+    background:transparent;
+    border:1px solid var(--line);
+    border-radius:999px;
+    color:var(--paper-dim);
+    font-size:14px; font-weight:700; line-height:1;
+  }
+  .dispToggle svg{ width:17px; height:17px; display:block; }
+  .dispToggle.active{ background:var(--seal); border-color:var(--seal); color:var(--ink); }
+  .dispToggle[data-toggle="ja"].active{ background:var(--ja-accent); border-color:var(--ja-accent); }
+
+  /* ---------- 入力ページの2段目：ファイル名（左）と新規・保存（右） ---------- */
+  #fileBar{
+    flex:0 0 auto;
+    display:flex; align-items:center; gap:6px;
+    padding:6px 10px 6px 16px;
+    border-bottom:1px solid var(--line);
+    background:var(--ink-soft);
+  }
   #titleWrap{
     flex:1 1 auto; min-width:0;
-    display:flex; align-items:center; justify-content:center; gap:6px;
+    display:flex; align-items:center; gap:4px;
   }
   #fileTitle{
     font-size:14px; font-weight:600; color:var(--paper);
     white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
-    max-width:100%;
+    min-width:0;
   }
-  #renameBtn{ width:24px; height:24px; flex:0 0 auto; }
+  #fileTitle.untitled{ color:var(--paper-dim); }
+  #renameBtn{ width:26px; height:26px; flex:0 0 auto; }
   #renameBtn svg{ width:13px; height:13px; }
+  #newBtn{ width:32px; height:32px; }
   #saveBtn{
     display:flex; align-items:center; gap:5px;
     background:transparent;
@@ -107,70 +136,44 @@
   #saveBtn.justSaved{ background:var(--seal); border-color:var(--seal); color:var(--ink); }
   #saveBtn.dirty{ background:var(--warn); border-color:var(--warn); color:var(--ink); }
 
-  /* ---------- mode bar ---------- */
-  #modeBar{
-    flex:0 0 auto;
-    display:flex; align-items:center;
-    padding:0 12px;
-    border-bottom:1px solid var(--line);
-    background:var(--ink-soft);
+  /* ---------- フッターのタブバー：画面下に浮かぶすりガラスのカプセル ----------
+     後ろのコンテンツはこの下までスクロールして透けて見える。各ページのスクロール領域の下余白には
+     JS(syncFooterOffsets)が実測した「画面下端からタブバー上端まで」の高さ(--footer-total-h)を使う */
+  #tabBar{
+    position:fixed;
+    left:12px; right:12px;
+    bottom:max(10px, calc(env(safe-area-inset-bottom) - 8px));
+    z-index:60;
+    display:grid; grid-template-columns:repeat(4, 1fr);
+    padding:4px;
+    border-radius:999px;
+    background:rgba(59,56,51,0.6);
+    -webkit-backdrop-filter:blur(18px) saturate(160%);
+    backdrop-filter:blur(18px) saturate(160%);
+    border:1px solid rgba(217,208,189,0.14);
+    box-shadow:0 10px 28px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.06);
   }
-  .tabs{ display:flex; gap:18px; flex:1 1 auto; }
-  .tabBtn{
-    background:none; border:none;
-    padding:10px 2px;
-    font-size:13px; font-weight:600;
-    color:var(--paper-dim);
-    border-bottom:2px solid transparent;
-  }
-  .tabBtn.active{ color:var(--paper); border-bottom-color:var(--seal); }
-
-  /* ---------- footer 1: 入力／単語帳／全漢字 切り替え（メニューを開くと隠れて非アクティブになる、単語帳・全漢字画面では隠れない） ----------
-     bottom は JS(syncFooterOffsets)がフッター2の実測の高さを入れて、常にフッター2の真上に重なるようにする */
-  #modeFooter{
-    position:fixed; left:0; right:0; bottom:var(--toolfooter-h);
-    z-index:55;
-    display:flex;
-    border-top:1px solid var(--line);
-  }
-  #modeFooter button{
-    flex:1 1 0;
-    height:var(--footer-h);
-    display:flex; align-items:center; justify-content:center; gap:6px;
-    border:none;
-    font-size:14px; font-weight:700;
-  }
-  #modeFooter button svg{ width:16px; height:16px; display:block; }
-  #modeFooterInputBtn{ background:var(--paper); color:var(--input-text); }
-  #modeFooterInputBtn:active{ background:var(--input-bg-dim); }
-  #modeFooterWordbookBtn{ background:var(--seal); color:var(--ink); }
-  #modeFooterWordbookBtn:active{ background:var(--seal-soft); color:var(--paper); }
-  #modeFooterAllKanjiBtn{ background:var(--paper-dim); color:var(--ink); }
-  #modeFooterAllKanjiBtn:active{ background:var(--input-bg-dim); }
-
-  /* ---------- footer 2: 声調123／声調記号／日本字体（画面最下部の安全余白を使い、メニューを開いても・単語帳画面でも隠れない） ---------- */
-  #toolFooter{
-    position:fixed; left:0; right:0; bottom:0;
-    z-index:95;
-    display:flex;
-    background:var(--ink-soft);
-    border-top:1px solid var(--line);
-    padding-bottom:env(safe-area-inset-bottom, 0px);
-  }
-  #toolFooter button{
-    flex:1 1 25%;
-    height:var(--footer-h);
-    display:flex; align-items:center; justify-content:center; gap:4px;
+  .tabItem{
+    position:relative; z-index:1;
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px;
+    height:52px;
+    padding:0;
     background:none; border:none;
     color:var(--paper-dim);
-    font-size:15px; font-weight:700; letter-spacing:0.3px;
+    font-size:10px; font-weight:700; letter-spacing:0.2px;
+    transition:color .25s ease;
   }
-  #toolFooter button + button{ border-left:1px solid var(--line); }
-  #toolFooter button svg{ width:18px; height:18px; display:block; }
-  #toneToggle.active{ background:var(--seal); color:var(--ink); }
-  #contourToggle.active{ background:var(--seal); color:var(--ink); }
-  #pinyinOffToggle.active{ background:var(--seal); color:var(--ink); }
-  #jaKanjiToggle.active{ background:var(--ja-accent); color:var(--ink); }
+  .tabItem svg{ width:22px; height:22px; display:block; }
+  .tabItem.active{ color:var(--seal); }
+  /* 選択中のタブの背景。JS(updateTabBarUI)が選択中のタブの位置へ横にすべらせる */
+  #tabIndicator{
+    position:absolute; top:4px; bottom:4px; left:4px;
+    width:calc((100% - 8px) / 4);
+    border-radius:999px;
+    background:rgba(217,208,189,0.13);
+    transition:transform .35s cubic-bezier(.3,1.25,.5,1);
+    pointer-events:none;
+  }
 
   /* ---------- input ---------- */
   #inputWrap{
@@ -250,73 +253,17 @@
   #clearBtn{ visibility:hidden; }
   #clearBtn.show{ visibility:visible; }
 
-  /* ---------- kanji-mode toolbar ---------- */
-  #kanjiToolbar{
-    flex:0 0 auto;
-    display:flex; align-items:center; justify-content:space-between;
-    padding:10px 16px;
-    gap:10px;
-    max-height:80px;
-    overflow:hidden;
-    transition:max-height .25s ease, opacity .2s ease, padding .25s ease;
-  }
-  body.focusMode #kanjiToolbar{
-    max-height:0;
-    padding-top:0; padding-bottom:0;
-    opacity:0;
-    pointer-events:none;
-  }
-  #kanjiActions{ display:flex; align-items:center; gap:10px; flex:1 1 auto; min-width:0; }
-  .pillBtn{
-    display:flex; align-items:center; gap:6px;
-    background:transparent; color:var(--paper-dim);
-    border:1px solid var(--line);
-    padding:8px 14px; border-radius:999px;
-    font-size:13px; font-weight:600;
-    white-space:nowrap;
-  }
-  .pillBtn[disabled]{ opacity:0.4; }
-  .pillBtn svg{ width:14px; height:14px; }
-  #groupBtn{ background:var(--seal); color:var(--ink); border:none; font-weight:700; }
-  #groupBtn[disabled]{ background:var(--seal-soft); color:var(--paper-dim); }
-  #reorderBtn{ color:var(--seal); border-color:var(--seal); font-weight:700; }
-  #orderHint{ font-size:11px; color:var(--paper-dim); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  #reorderActions{ display:none; align-items:center; justify-content:space-between; width:100%; }
-  #reorderActions .reorderLabel{ font-size:13px; font-weight:700; color:var(--seal); white-space:nowrap; }
-  #doneBtn{
-    display:flex; align-items:center; gap:5px;
-    background:var(--seal); color:var(--ink); border:none;
-    padding:7px 14px; border-radius:999px;
-    font-size:12px; font-weight:700; white-space:nowrap;
-  }
-  #doneBtn svg{ width:12px; height:12px; }
-
-  body.reordering #topHeader,
-  body.reordering #modeBar,
-  body.reordering #inputWrap{
-    opacity:0.32; filter:grayscale(0.4); pointer-events:none;
-  }
-  body.reordering #kanjiToolbar{ background:rgba(201,112,79,0.1); }
-  body.reordering #kanjiActions{ display:none; }
-  body.reordering #reorderActions{ display:flex; }
-  body.reordering .kcard{
-    touch-action:none;
-    -webkit-user-select:none; user-select:none;
-    -webkit-touch-callout:none;
-  }
-
   main{
     flex:1 1 auto;
     display:flex; flex-direction:column;
     min-height:0;
-    padding-bottom:var(--footer-total-h);
   }
 
   #results{
     flex:1 1 auto;
     overflow-y:auto;
     -webkit-overflow-scrolling:touch;
-    padding:10px 14px 16px;
+    padding:10px 14px calc(16px + var(--footer-total-h));
   }
   .lineBlock{
     padding:10px 0;
@@ -370,20 +317,13 @@
   [data-tone="4"]{ --tone-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 14'%3E%3Cline x1='5' y1='2' x2='15' y2='12' stroke='black' stroke-width='2.4' stroke-linecap='round'/%3E%3C/svg%3E"); }
   [data-tone="0"], [data-tone="5"]{ --tone-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 14'%3E%3Ccircle cx='10' cy='7' r='2.3' fill='black'/%3E%3C/svg%3E"); }
 
-  /* ---------- kanji grid (単漢字モード) ---------- */
-  #kanjiGrid{
-    flex:1 1 auto;
-    overflow-y:auto;
-    -webkit-overflow-scrolling:touch;
-    padding:6px 16px 16px;
-  }
+  /* ---------- 漢字カード（全漢字ページ） ---------- */
   .kgroup + .kgroup{ margin-top:14px; padding-top:12px; border-top:1px dashed var(--line); }
   .kgroupLabel{
     display:flex; align-items:center; gap:5px;
     font-size:16px; font-weight:700; color:var(--seal);
     letter-spacing:0.3px; margin-bottom:6px;
   }
-  .kgroupWarnIcon{ width:14px; height:14px; color:var(--warn); flex:0 0 auto; }
   .kgroupRow{ display:flex; flex-wrap:wrap; gap:3px; }
   .kcard{
     position:relative;
@@ -394,11 +334,9 @@
   }
   .kcard.wordActive{ background:var(--seal-soft); }
   .khz{ font-size:27px; line-height:1; color:var(--paper); }
-  .khz.mismatch{ color:var(--warn); }
 
   /* ---------- 日本漢字表示モードで、元の簡体字と実際に字形が変わった文字だけ色を付ける ---------- */
   .jaChanged{ color:var(--ja-accent); }
-  .khz.mismatch .jaChanged{ color:var(--warn); }
   .ktone{
     position:absolute; top:-1px; left:-1px;
     font-size:9px; font-weight:700; line-height:1;
@@ -406,15 +344,8 @@
   }
   .kcard.contourOn{ flex-direction:column; gap:1px; }
   .kcontour{ width:22px; height:15px; }
-  .kcard.dragging{
-    position:fixed; z-index:80;
-    background:var(--ink-soft); border:1px solid var(--seal); border-radius:8px;
-    box-shadow:0 10px 22px rgba(0,0,0,0.45);
-    transform:rotate(-4deg);
-  }
-  .kcardPlaceholder{ width:34px; height:34px; border:2px dashed var(--seal-soft); border-radius:8px; opacity:0.5; }
 
-  /* ---------- 単漢字タップ時の単語シート ---------- */
+  /* ---------- 全漢字ページで漢字をタップしたときの単語シート ---------- */
   #wordSheet{
     position:fixed; left:0; right:0;
     bottom:var(--footer-total-h);
@@ -512,38 +443,15 @@
   .modalBtnGhost{ background:transparent; border:none; color:var(--paper-dim); font-size:14px; padding:10px 12px; }
   .modalBtnPrimary{ background:var(--seal); color:var(--ink); border:none; border-radius:8px; font-size:14px; font-weight:700; padding:10px 18px; }
 
-  /* ---------- saved list：左からスワイプインするメニュー（本来の画面は入力モード側） ----------
-     メニューを開いている間は一番上まで覆う。閉じる操作はメニュー自身のヘッダーの
-     ハンバーガーアイコン（#listBackBtn）／背景タップ／本体ハンバーガー再タップで行う。 */
-  #listBackdrop{
-    position:fixed; inset:0; z-index:89;
-    background:rgba(0,0,0,0.45);
-    opacity:0; pointer-events:none;
-    transition:opacity .25s ease;
-  }
-  #listBackdrop.open{ opacity:1; pointer-events:auto; }
-  #listScreen{
-    position:fixed; top:0; bottom:0; left:0;
-    width:90%;
-    z-index:90;
+  /* ---------- 全画面のページ（保存一覧・単語帳・全漢字）。入力ページの上に重ねて表示する ---------- */
+  .pageScreen{
+    position:fixed; inset:0; z-index:50;
     background:var(--ink);
     display:flex; flex-direction:column;
-    transform:translateX(-100%);
-    transition:transform .25s ease;
-    box-shadow:10px 0 28px rgba(0,0,0,0.4);
-    pointer-events:none;
   }
-  #listScreen.open{ transform:translateX(0); pointer-events:auto; }
-  #listScreen header{
-    flex:0 0 auto;
-    display:flex; align-items:center; justify-content:space-between;
-    padding:8px 12px;
-    padding-top:calc(8px + env(safe-area-inset-top));
-    border-bottom:1px solid var(--line);
-    background:var(--ink-soft);
-  }
-  #listHeaderActions{ display:flex; align-items:center; gap:0; flex:0 0 auto; }
-  #listRows{ flex:1 1 auto; overflow-y:auto; padding:2px 16px calc(16px + var(--toolfooter-h)); }
+
+  /* ---------- 保存一覧ページ ---------- */
+  #listRows{ flex:1 1 auto; overflow-y:auto; padding:2px 16px calc(16px + var(--footer-total-h)); }
   .listEmpty{ padding:40px 8px; text-align:center; color:var(--paper-dim); font-size:13px; }
   .listRowWrap{ position:relative; overflow:hidden; border-bottom:1px dashed var(--line); }
   .listRowActions{ position:absolute; top:0; right:0; bottom:0; display:flex; }
@@ -604,25 +512,9 @@
   #listRows.isDragging .listRow{ touch-action:none; }
 
   /* ---------- 単語帳画面 ---------- */
-  #wordbookScreen{
-    position:fixed; inset:0; z-index:50;
-    background:var(--ink);
-    display:flex; flex-direction:column;
-  }
-  /* 左右の要素の幅が違っても（右側は選択中だけボタンが出る）タイトルが画面の真ん中に来るよう、
-     左右を同じ幅(1fr)にした3列で組む */
-  #wordbookScreen header{
-    flex:0 0 auto;
-    display:grid; grid-template-columns:1fr auto 1fr; align-items:center;
-    padding:8px 12px;
-    padding-top:calc(8px + env(safe-area-inset-top));
-    border-bottom:1px solid var(--line);
-    background:var(--ink-soft);
-  }
-  /* 選択中の件数は左側（メニューボタンの隣）に出す。右側に置くとボタン3つと合わせてタイトルに迫ってしまうため */
-  #wordbookHeaderLeft{ display:flex; align-items:center; gap:4px; justify-self:start; min-width:0; }
-  #wordbookHeaderActions{ display:flex; align-items:center; justify-content:flex-end; gap:2px; justify-self:end; }
+  /* 選択中の件数はタイトルの横に出す */
   #wordSelectCount{ font-size:12px; color:var(--paper-dim); white-space:nowrap; }
+  #wordSelectCount:empty{ display:none; }
   #wordSelectToggleBtn{ width:auto; height:auto; flex-direction:column; gap:1px; padding:6px 10px; flex:0 0 auto; }
   #wordSelectToggleBtn.active{ color:var(--seal); }
   .iconBtnLabel{ font-size:9px; font-weight:600; line-height:1; letter-spacing:0.2px; }
@@ -750,19 +642,6 @@
   .wordbookIndexItem.active{ background:var(--seal-soft); color:var(--paper); }
 
   /* ---------- 全漢字画面（登録した漢字を常にピンインごとにグループ表示） ---------- */
-  #allKanjiScreen{
-    position:fixed; inset:0; z-index:50;
-    background:var(--ink);
-    display:flex; flex-direction:column;
-  }
-  #allKanjiScreen header{
-    flex:0 0 auto;
-    display:flex; align-items:center; justify-content:space-between;
-    padding:8px 12px;
-    padding-top:calc(8px + env(safe-area-inset-top));
-    border-bottom:1px solid var(--line);
-    background:var(--ink-soft);
-  }
   #allKanjiAddBar{
     flex:0 0 auto;
     padding:10px 16px 6px;
@@ -916,10 +795,13 @@
 </style>
 </head>
 <body>
-  <header id="topHeader">
-    <button id="listBtn" class="iconBtn" type="button" aria-label="保存一覧" title="保存一覧">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="6" x2="20" y2="6"></line><line x1="4" y1="12" x2="20" y2="12"></line><line x1="4" y1="18" x2="14" y2="18"></line></svg>
-    </button>
+  <!-- ===== 入力ページ（土台の画面。ほかのページはこの上に全画面で重ねて表示する） ===== -->
+  <header id="topHeader" class="pageHeader">
+    <span class="pageTitle">入力</span>
+    <div class="displayToggles"></div>
+  </header>
+
+  <div id="fileBar">
     <div id="titleWrap">
       <span id="fileTitle"></span>
       <button id="renameBtn" class="iconBtn" type="button" aria-label="タイトルを編集" title="タイトルを編集">
@@ -933,13 +815,6 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
       保存
     </button>
-  </header>
-
-  <div id="modeBar">
-    <div class="tabs">
-      <button class="tabBtn active" data-mode="sentence" type="button">文章モード</button>
-      <button class="tabBtn" data-mode="kanji" type="button">単漢字モード</button>
-    </div>
   </div>
 
   <div id="inputWrap">
@@ -957,59 +832,32 @@
     </button>
   </div>
 
-  <div id="kanjiToolbar" hidden>
-    <div id="kanjiActions">
-      <button id="groupBtn" class="pillBtn" type="button">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="8" height="8" rx="1.5"></rect><rect x="13" y="3" width="8" height="8" rx="1.5"></rect><rect x="3" y="13" width="8" height="8" rx="1.5"></rect><rect x="13" y="13" width="8" height="8" rx="1.5"></rect></svg>
-        <span id="groupBtnLabel">グループ分け</span>
-      </button>
-      <button id="reorderBtn" class="pillBtn" type="button" hidden>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h13"></path><path d="M13 3l4 4-4 4"></path><path d="M21 17H8"></path><path d="M11 21l-4-4 4-4"></path></svg>
-        並び替え
-      </button>
-      <span id="orderHint"></span>
-    </div>
-    <div id="reorderActions">
-      <span class="reorderLabel">並び替え中</span>
-      <button id="doneBtn" type="button">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
-        完了
-      </button>
-    </div>
-  </div>
-
   <main>
     <div id="results">
       <div class="emptyState"></div>
     </div>
-    <div id="kanjiGrid" hidden></div>
   </main>
 
-  <div id="modeFooter">
-    <button id="modeFooterInputBtn" type="button">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg>
-      入力
+  <!-- ===== フッターのタブバー（画面下に浮かぶすりガラスのカプセル） ===== -->
+  <nav id="tabBar" aria-label="ページ切り替え">
+    <span id="tabIndicator" aria-hidden="true"></span>
+    <button class="tabItem" type="button" data-tab="list">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="6" x2="20" y2="6"></line><line x1="4" y1="12" x2="20" y2="12"></line><line x1="4" y1="18" x2="14" y2="18"></line></svg>
+      <span>保存一覧</span>
     </button>
-    <button id="modeFooterWordbookBtn" type="button">
+    <button class="tabItem" type="button" data-tab="input">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg>
+      <span>入力</span>
+    </button>
+    <button class="tabItem" type="button" data-tab="wordbook">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
-      単語帳
+      <span>単語帳</span>
     </button>
-    <button id="modeFooterAllKanjiBtn" type="button">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="8" height="8" rx="1.5"></rect><rect x="13" y="3" width="8" height="8" rx="1.5"></rect><rect x="3" y="13" width="8" height="8" rx="1.5"></rect><rect x="13" y="13" width="8" height="8" rx="1.5"></rect></svg>
-      全漢字
+    <button class="tabItem" type="button" data-tab="allKanji">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="8" height="8" rx="1.5"></rect><rect x="13" y="3" width="8" height="8" rx="1.5"></rect><rect x="3" y="13" width="8" height="8" rx="1.5"></rect><rect x="13" y="13" width="8" height="8" rx="1.5"></rect></svg>
+      <span>全漢字</span>
     </button>
-  </div>
-
-  <div id="toolFooter">
-    <button id="toneToggle" type="button" aria-pressed="false" title="声調を数字でも表示">123</button>
-    <button id="contourToggle" type="button" aria-pressed="false" title="声調を高低カーブの記号で表示（アルファベット非表示）">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 17 L9 7 L15 7 L20 17"></path></svg>
-    </button>
-    <button id="pinyinOffToggle" type="button" aria-pressed="false" title="ピンインを表示しない">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><line x1="5.6" y1="5.6" x2="18.4" y2="18.4"></line></svg>
-    </button>
-    <button id="jaKanjiToggle" type="button" aria-pressed="false" title="漢字を日本の字体で表示（内部のデータは変わりません）">日</button>
-  </div>
+  </nav>
 
   <div id="wordSheet">
     <div class="wordSheetHandle"></div>
@@ -1034,14 +882,11 @@
     </div>
   </div>
 
-  <div id="listBackdrop"></div>
-  <div id="listScreen">
-    <header>
-      <button id="listBackBtn" class="iconBtn" type="button" aria-label="メニューを閉じる" title="メニューを閉じる">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="6" x2="20" y2="6"></line><line x1="4" y1="12" x2="20" y2="12"></line><line x1="4" y1="18" x2="14" y2="18"></line></svg>
-      </button>
-      <span class="brand" id="listBrand">保存一覧</span>
-      <div id="listHeaderActions">
+  <!-- ===== 保存一覧ページ ===== -->
+  <div id="listScreen" class="pageScreen" hidden>
+    <header class="pageHeader">
+      <span class="pageTitle" id="listBrand">保存一覧</span>
+      <div class="headerActions">
         <button id="exportBtn" class="iconBtn" type="button" aria-label="バックアップを書き出す" title="バックアップを書き出す（JSONファイル）">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"></path><polyline points="7 10 12 15 17 10"></polyline><path d="M4 19h16"></path></svg>
         </button>
@@ -1064,16 +909,15 @@
     <div id="listRows"></div>
   </div>
 
-  <div id="wordbookScreen" hidden>
-    <header>
-      <div id="wordbookHeaderLeft">
-        <button id="wordbookMenuBtn" class="iconBtn" type="button" aria-label="保存一覧" title="保存一覧">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="6" x2="20" y2="6"></line><line x1="4" y1="12" x2="20" y2="12"></line><line x1="4" y1="18" x2="14" y2="18"></line></svg>
-        </button>
+  <!-- ===== 単語帳ページ ===== -->
+  <div id="wordbookScreen" class="pageScreen" hidden>
+    <header class="pageHeader">
+      <div class="pageTitleWrap">
+        <span class="pageTitle">単語帳</span>
         <span id="wordSelectCount"></span>
       </div>
-      <span class="brand">単語帳</span>
-      <div id="wordbookHeaderActions">
+      <div class="headerActions">
+        <!-- 選択モードの間だけ、表示切り替えの代わりにこの3つを出す -->
         <button id="wordMarkPersonBtn" class="iconBtn" type="button" aria-label="人名として登録" title="人名として登録" hidden disabled>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><line x1="20" y1="8" x2="20" y2="14"></line><line x1="23" y1="11" x2="17" y2="11"></line></svg>
         </button>
@@ -1083,6 +927,7 @@
         <button id="wordDeleteBtn" class="iconBtn" type="button" aria-label="削除" title="削除" hidden disabled>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path></svg>
         </button>
+        <div class="displayToggles"></div>
       </div>
     </header>
     <div id="wordSortBar">
@@ -1103,13 +948,11 @@
     </div>
   </div>
 
-  <div id="allKanjiScreen" hidden>
-    <header>
-      <button id="allKanjiMenuBtn" class="iconBtn" type="button" aria-label="保存一覧" title="保存一覧">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="6" x2="20" y2="6"></line><line x1="4" y1="12" x2="20" y2="12"></line><line x1="4" y1="18" x2="14" y2="18"></line></svg>
-      </button>
-      <span class="brand">全漢字</span>
-      <div class="iconBtn" aria-hidden="true"></div>
+  <!-- ===== 全漢字ページ ===== -->
+  <div id="allKanjiScreen" class="pageScreen" hidden>
+    <header class="pageHeader">
+      <span class="pageTitle">全漢字</span>
+      <div class="displayToggles"></div>
     </header>
     <div id="allKanjiAddBar">
       <input id="allKanjiAddInput" type="text" placeholder="文字を入力してEnterで漢字を登録" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="done" />
@@ -1154,35 +997,18 @@
   // ---------- element refs ----------
   const input = document.getElementById('zhInput');
   const results = document.getElementById('results');
-  const kanjiGrid = document.getElementById('kanjiGrid');
   const clearBtn = document.getElementById('clearBtn');
   const undoBtn = document.getElementById('undoBtn');
   const surume = document.getElementById('surume');
 
-  const topHeader = document.getElementById('topHeader');
-  const listBtn = document.getElementById('listBtn');
   const saveBtn = document.getElementById('saveBtn');
   const fileTitle = document.getElementById('fileTitle');
   const renameBtn = document.getElementById('renameBtn');
 
-  const tabBtns = document.querySelectorAll('.tabBtn');
-  const toneToggle = document.getElementById('toneToggle');
-  const contourToggle = document.getElementById('contourToggle');
-  const pinyinOffToggle = document.getElementById('pinyinOffToggle');
-  const jaKanjiToggle = document.getElementById('jaKanjiToggle');
   const focusToggle = document.getElementById('focusToggle');
 
   const wordSheet = document.getElementById('wordSheet');
   const wordSheetList = document.getElementById('wordSheetList');
-
-  const kanjiToolbar = document.getElementById('kanjiToolbar');
-  const kanjiActions = document.getElementById('kanjiActions');
-  const groupBtn = document.getElementById('groupBtn');
-  const groupBtnLabel = document.getElementById('groupBtnLabel');
-  const reorderBtn = document.getElementById('reorderBtn');
-  const orderHint = document.getElementById('orderHint');
-  const reorderActions = document.getElementById('reorderActions');
-  const doneBtn = document.getElementById('doneBtn');
 
   const saveModal = document.getElementById('saveModal');
   const modalHeading = document.getElementById('modalHeading');
@@ -1192,8 +1018,6 @@
   const modalSaveBtn = document.getElementById('modalSaveBtn');
 
   const listScreen = document.getElementById('listScreen');
-  const listBackdrop = document.getElementById('listBackdrop');
-  const listBackBtn = document.getElementById('listBackBtn');
   const listNewBtn = document.getElementById('listNewBtn');
   const newBtn = document.getElementById('newBtn');
   const listRows = document.getElementById('listRows');
@@ -1204,14 +1028,12 @@
   const listSearchInput = document.getElementById('listSearchInput');
   const listSearchClear = document.getElementById('listSearchClear');
 
-  const modeFooter = document.getElementById('modeFooter');
-  const toolFooter = document.getElementById('toolFooter');
-  const modeFooterInputBtn = document.getElementById('modeFooterInputBtn');
-  const modeFooterWordbookBtn = document.getElementById('modeFooterWordbookBtn');
-  const modeFooterAllKanjiBtn = document.getElementById('modeFooterAllKanjiBtn');
+  const tabBar = document.getElementById('tabBar');
+  const tabIndicator = document.getElementById('tabIndicator');
+  const tabItems = Array.from(document.querySelectorAll('.tabItem'));
 
   const wordbookScreen = document.getElementById('wordbookScreen');
-  const wordbookMenuBtn = document.getElementById('wordbookMenuBtn');
+  const wordbookDisplayToggles = wordbookScreen.querySelector('.displayToggles');
   const wordSelectToggleBtn = document.getElementById('wordSelectToggleBtn');
   const wordMarkPersonBtn = document.getElementById('wordMarkPersonBtn');
   const wordUnmarkPersonBtn = document.getElementById('wordUnmarkPersonBtn');
@@ -1223,7 +1045,6 @@
   const wordSortBtns = Array.from(document.querySelectorAll('.wordSortBtn'));
 
   const allKanjiScreen = document.getElementById('allKanjiScreen');
-  const allKanjiMenuBtn = document.getElementById('allKanjiMenuBtn');
   const allKanjiAddInput = document.getElementById('allKanjiAddInput');
   const allKanjiGrid = document.getElementById('allKanjiGrid');
   const allKanjiIndex = document.getElementById('allKanjiIndex');
@@ -1356,13 +1177,11 @@
 
   // ---------- app state ----------
   const state = {
-    mode: 'sentence',      // 'sentence' | 'kanji'
-    toneType: 'symbol',    // 'symbol' | 'num' (どちらか一方のみ表示。併記はしない)
+    tab: 'input',          // 表示中のページ：'list' | 'input' | 'wordbook' | 'allKanji'
+    toneType: 'symbol',    // 'symbol' | 'num' (どちらか一方のみ表示。併記はしない。'num'に切り替えるボタンは今は出していない)
     contourOn: false,      // true のときはアルファベットを隠し、声調を高低カーブのSVG記号で表示する
     pinyinOff: false,      // true のときはピンインも声調カーブも一切表示しない（contourOnとは同時にtrueにならない）
-    reordering: false,
     focusMode: false,
-    groupedView: false,    // 単漢字モードでグループ分け済みかどうか（グループが1つだけでも true になりうる）
     jaKanjiOn: false,      // true のときは漢字の表示だけ日本の字体に変換する（内部データ・ピンイン計算には影響しない）
   };
 
@@ -1517,7 +1336,7 @@
       try { return pp.pinyin(ch, { toneType: 'none', multiple: false }) || ''; } catch (e) { return ''; }
     });
   }
-  // 声調の数字1文字だけ取り出す（単漢字モードで123トグルON時に使う）
+  // 声調の数字1文字だけ取り出す（全漢字ページの漢字カードの声調表示に使う）
   const toneDigitCache = new Map();
   function getToneDigit(ch) {
     return memo(toneDigitCache, ch, () => {
@@ -1646,7 +1465,7 @@
     });
   }
 
-  // 文章モード用：行全体を漢字＋声調カーブの行にする
+  // 入力ページ用：行全体を漢字＋声調カーブの行にする
   function buildContourBlock(normalizedLine) {
     const block = document.createElement('div');
     block.className = 'lineBlock contourBlock';
@@ -1723,10 +1542,10 @@
     lastCommittedValue = prev;
     undoBtn.disabled = undoStack.length === 0;
     autoGrow();
-    renderCurrentMode();
+    renderInputPage();
   });
 
-  // ================= 文章モード =================
+  // ================= 入力ページ（文章とピンイン） =================
   function renderSentence() {
     const raw = input.value;
     const trimmed = raw ? raw.trim() : '';
@@ -1783,33 +1602,13 @@
     results.scrollTop = results.scrollHeight;
   }
 
-  // ================= 単漢字モード =================
-  // テキストエリアの内容そのものを正とする：行＝グループ。1行のみなら「未グループ」表示。
-  function parseKanjiLines(rawText) {
-    const normalized = normalizeToSimplified(rawText);
-    const rawLines = normalized.split('\n');
-    const seen = new Set();
-    const lines = [];
-    rawLines.forEach((line) => {
-      const chars = [];
-      for (const ch of line) {
-        if (!HANZI_RE.test(ch)) continue;
-        if (seen.has(ch)) continue;
-        seen.add(ch);
-        chars.push(ch);
-      }
-      if (chars.length) lines.push(chars);
-    });
-    return lines;
-  }
-
+  // ================= 全漢字ページの漢字カード =================
   // 漢字だけを大きく表示。声調数字は123トグルON時のみ右肩に小さく（絶対配置なのでレイアウトは動かない）。
-  // mismatch=true のときは、そのグループの代表音と読みが違う＝警告色で表示。
   // 単語帳にその漢字を含む単語が1つもないときはタップしても何も起きないので、少し薄い色で示す。
   // opts.base/opts.tone（全漢字ページ用）：多音字をどの読みとして表示しているか。
   // 指定時は声調表示をその読みの声調にし、タップで出す単語もその読みのものだけに絞る。
   // opts.alwaysShowTone：123ボタンがOFFでも声調数字を表示する（全漢字ページの各声調の先頭用）。
-  function makeCard(ch, mismatch, opts) {
+  function makeCard(ch, opts) {
     const base = (opts && opts.base) || '';
     const toneDigit = opts && opts.tone != null ? opts.tone : getToneDigit(ch);
     const hasWord = wordsForChar(ch, base).length > 0;
@@ -1819,7 +1618,7 @@
     if (base) card.dataset.base = base;
 
     const hz = document.createElement('span');
-    hz.className = 'khz' + (mismatch ? ' mismatch' : '') + (hasWord ? '' : ' noWord');
+    hz.className = 'khz' + (hasWord ? '' : ' noWord');
     renderDisplayText(hz, ch);
     card.appendChild(hz);
 
@@ -1837,16 +1636,14 @@
     }
 
     card.addEventListener('click', () => {
-      if (state.reordering || !hasWord) return;
+      if (!hasWord) return;
       openWordSheetFor(ch, card, base);
     });
 
     return card;
   }
 
-  const WARN_ICON_SVG = '<svg class="kgroupWarnIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>';
-
-  // ================= 単漢字タップ時の単語シート =================
+  // ================= 漢字タップ時の単語シート =================
   // 登録済み単語にその漢字を含むものがあれば下からシートを出す。無ければ何もしない（現状維持）。
   let activeWordCard = null;
   let activeWordChar = null;
@@ -1907,17 +1704,14 @@
     activeWordBase = '';
   }
   // 声調123／声調カーブ／日本字体の表示設定が変わったとき用。呼び出し側は
-  // renderCurrentMode(true)でシート自体を閉じずに描画し直しているので、ここでは
+  // renderInputPage(true)でシート自体を閉じずに描画し直しているので、ここでは
   // 新しい表示設定のカードを探して中身だけを作り直す（'open'クラスは既に付いたままなので
   // classList.addは何もしない＝閉じるアニメーションは一切発生しない）
   function reopenWordSheetIfNeeded(ch, base) {
     if (!ch) return;
-    // シートは単漢字モードのグリッドか全漢字ページのグリッドのどちらからでも開けるので、
-    // 今表示されている方を探す
-    const grid = !allKanjiScreen.hidden ? allKanjiGrid : kanjiGrid;
     // 全漢字ページでは同じ漢字が複数の読みのグループに出るので、読み(data-base)まで一致するカードを探す
     const sel = '.kcard[data-char="' + CSS.escape(ch) + '"]' + (base ? '[data-base="' + CSS.escape(base) + '"]' : '');
-    const card = grid.querySelector(sel);
+    const card = allKanjiGrid.querySelector(sel);
     openWordSheetFor(ch, card, base);
   }
   // カードでもシート自身でも表示切り替えボタンでもない場所をタップしたら閉じる
@@ -1925,52 +1719,9 @@
     if (!wordSheet.classList.contains('open')) return;
     if (e.target.closest('#wordSheet')) return;
     if (e.target.closest('.kcard')) return;
-    if (e.target.closest('#toolFooter')) return;
+    if (e.target.closest('.displayToggles')) return;
     closeWordSheet();
   });
-
-  function renderKanjiMode() {
-    const lines = parseKanjiLines(input.value);
-    kanjiGrid.innerHTML = '';
-
-    if (!lines.length) {
-      kanjiGrid.innerHTML = '<div class="emptyState"></div>';
-      updateKanjiToolbarUI(0, false);
-      return;
-    }
-
-    // state.groupedView が true（＝グループ分け実行済み）のときだけ、グループ見出し・不一致警告を出す。
-    // 同じピンインの漢字しかなくグループが1つだけになった場合でも、実行済みなら見出しを表示する。
-    const isGroupedView = state.groupedView;
-    lines.forEach((chars) => {
-      const wrap = document.createElement('div');
-      wrap.className = 'kgroup';
-
-      let labelKey = '';
-      if (isGroupedView) {
-        labelKey = getBasePinyin(chars[0]) || '';
-        const hasMismatch = chars.some((ch) => getBasePinyin(ch) !== labelKey);
-        const label = document.createElement('div');
-        label.className = 'kgroupLabel';
-        label.innerHTML = '<span>' + escapeHtml(labelKey) + '</span>' + (hasMismatch ? WARN_ICON_SVG : '');
-        wrap.appendChild(label);
-      }
-
-      const row = document.createElement('div');
-      row.className = 'kgroupRow';
-      chars.forEach((ch) => {
-        const mismatch = isGroupedView && getBasePinyin(ch) !== labelKey;
-        row.appendChild(makeCard(ch, mismatch));
-      });
-      wrap.appendChild(row);
-      kanjiGrid.appendChild(wrap);
-    });
-
-    const total = lines.reduce((n, chars) => n + chars.length, 0);
-    updateKanjiToolbarUI(total, isGroupedView);
-
-    if (state.reordering) attachDragHandlers();
-  }
 
   // ================= 全漢字ページ =================
   // 登録済みの漢字を常にピンインでグループ化して表示する。
@@ -2021,7 +1772,7 @@
       // 同じ声調の並びの先頭の漢字だけは、123ボタンの状態に関係なく声調数字を常に出す
       let prevTone = null;
       groups.get(key).forEach(({ ch, tone }) => {
-        row.appendChild(makeCard(ch, false, { base: key, tone, alwaysShowTone: tone !== prevTone }));
+        row.appendChild(makeCard(ch, { base: key, tone, alwaysShowTone: tone !== prevTone }));
         prevTone = tone;
       });
       wrap.appendChild(row);
@@ -2073,163 +1824,7 @@
   allKanjiIndex.addEventListener('touchend', () => setAllKanjiIndexActive(null));
   allKanjiIndex.addEventListener('touchcancel', () => setAllKanjiIndexActive(null));
 
-  function updateKanjiToolbarUI(charCount, isGroupedView) {
-    groupBtnLabel.textContent = isGroupedView ? '再グループ化' : 'グループ分け';
-    groupBtn.disabled = charCount === 0;
-    reorderBtn.hidden = !isGroupedView;
-    orderHint.textContent = (!isGroupedView && charCount > 0) ? '入力順で表示中' : '';
-  }
-
-  // グループ分け：既にまとまっている行（＝同じ音の文字だけの行）はその並びを維持し、
-  // 新しく増えた文字（混在した行や新規追加分）だけを対応グループの末尾に足す。
-  function performGrouping() {
-    const normalized = normalizeToSimplified(input.value);
-    const rawLines = normalized.split('\n');
-    const seen = new Set();
-    const pureGroups = new Map();
-    const strayChars = [];
-
-    rawLines.forEach((line) => {
-      const chars = [];
-      for (const ch of line) {
-        if (!HANZI_RE.test(ch) || seen.has(ch)) continue;
-        seen.add(ch);
-        chars.push(ch);
-      }
-      if (!chars.length) return;
-      const keys = new Set(chars.map(getBasePinyin));
-      if (keys.size === 1) {
-        const key = getBasePinyin(chars[0]);
-        const arr = pureGroups.get(key) || [];
-        pureGroups.set(key, arr.concat(chars));
-      } else {
-        strayChars.push.apply(strayChars, chars);
-      }
-    });
-
-    strayChars.forEach((ch) => {
-      const key = getBasePinyin(ch) || ch;
-      const arr = pureGroups.get(key) || [];
-      arr.push(ch);
-      pureGroups.set(key, arr);
-    });
-
-    if (!pureGroups.size) return;
-
-    const orderedKeys = Array.from(pureGroups.keys()).sort(compareGroupKeys);
-    const outLines = orderedKeys.map((k) => pureGroups.get(k).join(''));
-    commitInputValue(outLines.join('\n'));
-    state.groupedView = true;
-    renderCurrentMode();
-  }
-
-  groupBtn.addEventListener('click', performGrouping);
-
-  reorderBtn.addEventListener('click', () => {
-    closeWordSheet();
-    state.reordering = true;
-    document.body.classList.add('reordering');
-    renderKanjiMode();
-  });
-
-  function collectTextFromDom() {
-    const lines = [];
-    kanjiGrid.querySelectorAll('.kgroup').forEach((groupEl) => {
-      const row = groupEl.querySelector('.kgroupRow');
-      if (!row) return;
-      const chars = Array.prototype.map
-        .call(row.querySelectorAll('.kcard'), (c) => c.dataset.char)
-        .join('');
-      if (chars) lines.push(chars);
-    });
-    return lines.join('\n');
-  }
-
-  doneBtn.addEventListener('click', () => {
-    const newText = collectTextFromDom();
-    commitInputValue(newText);
-    state.reordering = false;
-    document.body.classList.remove('reordering');
-    renderCurrentMode();
-  });
-
-  // カードのドラッグ並び替え（マウス／タッチ共通、グループ内のみ）
-  function attachDragHandlers() {
-    kanjiGrid.querySelectorAll('.kgroupRow').forEach((row) => {
-      Array.prototype.forEach.call(row.querySelectorAll('.kcard'), (card) => attachCardDrag(card, row));
-    });
-  }
-
-  function attachCardDrag(card, row) {
-    card.addEventListener('pointerdown', (e) => {
-      if (!state.reordering) return;
-      e.preventDefault();
-      const rect = card.getBoundingClientRect();
-      const offsetX = e.clientX - rect.left;
-      const offsetY = e.clientY - rect.top;
-      try { card.setPointerCapture(e.pointerId); } catch (err) { /* noop */ }
-      card.classList.add('dragging');
-      card.style.width = rect.width + 'px';
-      card.style.left = rect.left + 'px';
-      card.style.top = rect.top + 'px';
-
-      const placeholder = document.createElement('div');
-      placeholder.className = 'kcardPlaceholder';
-      placeholder.style.width = rect.width + 'px';
-      placeholder.style.height = rect.height + 'px';
-      row.insertBefore(placeholder, card.nextSibling);
-
-      function onMove(ev) {
-        card.style.left = (ev.clientX - offsetX) + 'px';
-        card.style.top = (ev.clientY - offsetY) + 'px';
-        const dragRect = card.getBoundingClientRect();
-        const dcx = dragRect.left + dragRect.width / 2;
-        const dcy = dragRect.top + dragRect.height / 2;
-        let closest = null;
-        let closestDist = Infinity;
-        Array.prototype.forEach.call(row.querySelectorAll('.kcard:not(.dragging)'), (sib) => {
-          const r = sib.getBoundingClientRect();
-          const dist = Math.hypot(dcx - (r.left + r.width / 2), dcy - (r.top + r.height / 2));
-          if (dist < closestDist) { closestDist = dist; closest = sib; }
-        });
-        if (closest) {
-          const r = closest.getBoundingClientRect();
-          const before = dcx < r.left + r.width / 2;
-          row.insertBefore(placeholder, before ? closest : closest.nextSibling);
-        }
-      }
-      function onUp(ev) {
-        row.insertBefore(card, placeholder);
-        placeholder.remove();
-        card.classList.remove('dragging');
-        card.style.position = '';
-        card.style.left = '';
-        card.style.top = '';
-        card.style.width = '';
-        try { card.releasePointerCapture(ev.pointerId); } catch (err) { /* noop */ }
-        window.removeEventListener('pointermove', onMove);
-        window.removeEventListener('pointerup', onUp);
-      }
-      window.addEventListener('pointermove', onMove);
-      window.addEventListener('pointerup', onUp);
-    });
-  }
-
-  // ================= モード切替 / 声調トグル =================
-  function updateModeTabsUI() {
-    tabBtns.forEach((btn) => btn.classList.toggle('active', btn.dataset.mode === state.mode));
-  }
-
-  tabBtns.forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const mode = btn.dataset.mode;
-      if (mode === state.mode) return;
-      state.mode = mode;
-      updateModeTabsUI();
-      renderCurrentMode();
-    });
-  });
-
+  // ================= 表示切り替え（声調カーブ／ピンインなし／日本字体） =================
   // 単語帳を開いている間に声調表示の設定を切り替えたら、単語帳側も即座に反映する
   function refreshWordbookIfOpen() {
     if (!wordbookScreen.hidden) renderWordGrid();
@@ -2239,54 +1834,82 @@
     if (!allKanjiScreen.hidden) renderAllKanjiGrid();
   }
 
-  function setToggleActive(btn, on) {
-    btn.classList.toggle('active', on);
-    btn.setAttribute('aria-pressed', on ? 'true' : 'false');
-  }
-  // 下段フッターのボタンの点灯状態を今のstateに合わせる。
-  // ピンインなしモード中は123の設定（toneType）は覚えたまま、ボタンだけ消灯する
-  function updateToolFooterUI() {
-    setToggleActive(toneToggle, state.toneType === 'num' && !state.pinyinOff);
-    setToggleActive(contourToggle, state.contourOn);
-    setToggleActive(pinyinOffToggle, state.pinyinOff);
-    setToggleActive(jaKanjiToggle, state.jaKanjiOn);
+  // ヘッダー右の表示切り替えボタン。入力・単語帳・全漢字の各ヘッダーの .displayToggles に同じものを並べる。
+  // 'num'（声調を数字で表示）は今はボタンを出していない（hidden: true）。戻すときは hidden を外すだけでよい
+  const DISPLAY_TOGGLES = [
+    {
+      key: 'num', hidden: true, label: '123', title: '声調を数字で表示',
+      isOn: () => state.toneType === 'num' && !state.pinyinOff,
+      apply: () => {
+        if (state.contourOn || state.pinyinOff) {
+          // 記号モード／ピンインなしモード中に押した場合は、そのモードを抜けて数字モードへ切り替える
+          state.contourOn = false;
+          state.pinyinOff = false;
+          state.toneType = 'num';
+        } else {
+          state.toneType = state.toneType === 'symbol' ? 'num' : 'symbol';
+        }
+      },
+    },
+    {
+      key: 'contour', title: '声調を高低カーブの記号で表示（アルファベット非表示）',
+      icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 17 L9 7 L15 7 L20 17"></path></svg>',
+      isOn: () => state.contourOn,
+      apply: () => {
+        state.pinyinOff = false;
+        state.contourOn = !state.contourOn;
+      },
+    },
+    {
+      key: 'off', title: 'ピンインを表示しない',
+      icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><line x1="5.6" y1="5.6" x2="18.4" y2="18.4"></line></svg>',
+      isOn: () => state.pinyinOff,
+      apply: () => {
+        state.pinyinOff = !state.pinyinOff;
+        if (state.pinyinOff) state.contourOn = false;
+      },
+    },
+    {
+      key: 'ja', label: '日', title: '漢字を日本の字体で表示（内部のデータは変わりません）',
+      isOn: () => state.jaKanjiOn,
+      apply: () => { state.jaKanjiOn = !state.jaKanjiOn; },
+    },
+  ];
+  document.querySelectorAll('.displayToggles').forEach((box) => {
+    DISPLAY_TOGGLES.forEach((t) => {
+      if (t.hidden) return;
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'dispToggle';
+      btn.dataset.toggle = t.key;
+      btn.title = t.title;
+      btn.setAttribute('aria-label', t.title);
+      if (t.icon) btn.innerHTML = t.icon;
+      else btn.textContent = t.label;
+      btn.addEventListener('click', () => applyDisplaySettingChange(t.apply));
+      box.appendChild(btn);
+    });
+  });
+  // 表示切り替えボタンの点灯状態を今のstateに合わせる（全ヘッダーのボタンをまとめて更新する）
+  function updateDisplayTogglesUI() {
+    document.querySelectorAll('.dispToggle').forEach((btn) => {
+      const t = DISPLAY_TOGGLES.find((x) => x.key === btn.dataset.toggle);
+      const on = t.isOn();
+      btn.classList.toggle('active', on);
+      btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+    });
   }
   // 表示設定を変えたあと、開いている画面・単語シートをすべて描き直す
   function applyDisplaySettingChange(fn) {
     const reopenChar = wordSheet.classList.contains('open') ? activeWordChar : null;
     const reopenBase = activeWordBase;
     fn();
-    updateToolFooterUI();
-    renderCurrentMode(!!reopenChar);
+    updateDisplayTogglesUI();
+    renderInputPage(!!reopenChar);
     refreshWordbookIfOpen();
     refreshAllKanjiIfOpen();
     reopenWordSheetIfNeeded(reopenChar, reopenBase);
   }
-
-  toneToggle.addEventListener('click', () => applyDisplaySettingChange(() => {
-    if (state.contourOn || state.pinyinOff) {
-      // 記号モード／ピンインなしモード中に押した場合は、そのモードを抜けて数字モードへ切り替える
-      state.contourOn = false;
-      state.pinyinOff = false;
-      state.toneType = 'num';
-    } else {
-      state.toneType = state.toneType === 'symbol' ? 'num' : 'symbol';
-    }
-  }));
-
-  contourToggle.addEventListener('click', () => applyDisplaySettingChange(() => {
-    state.pinyinOff = false;
-    state.contourOn = !state.contourOn;
-  }));
-
-  pinyinOffToggle.addEventListener('click', () => applyDisplaySettingChange(() => {
-    state.pinyinOff = !state.pinyinOff;
-    if (state.pinyinOff) state.contourOn = false;
-  }));
-
-  jaKanjiToggle.addEventListener('click', () => applyDisplaySettingChange(() => {
-    state.jaKanjiOn = !state.jaKanjiOn;
-  }));
 
   // 入力欄を畳む(true)／開く(false)
   function setFocusMode(on) {
@@ -2298,27 +1921,15 @@
   }
   focusToggle.addEventListener('click', () => setFocusMode(!state.focusMode));
 
-  // ================= 描画の切替 =================
-  // keepWordSheet=trueのときは単語シートを閉じない（声調123／声調カーブ／日本字体の
-  // 表示切り替えボタン用。呼び出し側でシートの中身を後から作り直す）
-  function renderCurrentMode(keepWordSheet) {
+  // ================= 入力ページの描画 =================
+  // keepWordSheet=trueのときは単語シートを閉じない（表示切り替えボタン用。呼び出し側でシートの中身を後から作り直す）
+  function renderInputPage(keepWordSheet) {
     if (!keepWordSheet) closeWordSheet();
     const trimmed = input.value ? input.value.trim() : '';
     updateSurume(trimmed !== '');
     clearBtn.classList.toggle('show', input.value.length > 0);
     updateSaveBtnDirtyState();
-
-    if (state.mode === 'sentence') {
-      results.hidden = false;
-      kanjiGrid.hidden = true;
-      kanjiToolbar.hidden = true;
-      renderSentence();
-    } else {
-      results.hidden = true;
-      kanjiGrid.hidden = false;
-      kanjiToolbar.hidden = false;
-      renderKanjiMode();
-    }
+    renderSentence();
   }
 
   function autoGrow() {
@@ -2337,14 +1948,13 @@
       }
     }, 800);
     autoGrow();
-    state.groupedView = false;
-    renderCurrentMode();
+    renderInputPage();
   });
 
   clearBtn.addEventListener('click', () => {
     commitInputValue('');
     input.focus();
-    renderCurrentMode();
+    renderInputPage();
   });
 
   // ================= 保存（localStorage） =================
@@ -2373,7 +1983,7 @@
       changed = true;
     }
     if (!f.title || !String(f.title).trim()) {
-      f.title = computeAutoTitle(f.mode, f.text || '');
+      f.title = defaultTitleFromText(f.text || '');
       changed = true;
     }
     return changed;
@@ -2408,7 +2018,7 @@
   }
   let folders = loadFolders();
 
-  // ---------- 単語帳（単漢字モードのタップで関連語を出すための登録単語） ----------
+  // ---------- 単語帳（全漢字ページで漢字をタップしたときに関連語を出すための登録単語） ----------
   const WORDS_KEY = 'pinyinHelperWords_v1';
   function loadWords() {
     try {
@@ -2673,37 +2283,17 @@
   // 人名バッジ用の塗りつぶしバストアップアイコン（単語帳の背景透かし・全漢字ページの人名マーク共用）
   const PERSON_SVG = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"></path></svg>';
 
-  // 開いているファイルのタイトルをヘッダーに表示（未保存の新規ファイルは空）
+  // 開いているファイルのタイトルを入力ページの2段目に表示（まだタイトルのない新規ファイルは「無題」）
   function setTitleDisplay(title) {
-    fileTitle.textContent = title || '';
+    fileTitle.textContent = title || '無題';
+    fileTitle.classList.toggle('untitled', !title);
   }
 
-  // 保存時にタイトルが空欄だったときに使う自動タイトル
-  // 文章モード：先頭の文字を適度な文字数だけ抽出
+  // 保存時にタイトルが空欄だったときに使う自動タイトル：先頭の文字を適度な文字数だけ抽出
   function defaultTitleFromText(text) {
     const flat = text.replace(/\s+/g, '').trim();
     if (!flat) return '無題';
     return flat.length > 14 ? flat.slice(0, 14) + '…' : flat;
-  }
-
-  // 単漢字モードの自動タイトル：グループ（行）ごとの代表ピンインを、同じ音は重複させずに半角スペースで連結
-  function kanjiAutoTitle(text) {
-    const lines = parseKanjiLines(text);
-    const seen = new Set();
-    const labels = [];
-    lines.forEach((chars) => {
-      if (!chars.length) return;
-      const label = getBasePinyin(chars[0]) || chars[0];
-      if (seen.has(label)) return;
-      seen.add(label);
-      labels.push(label);
-    });
-    return labels.length ? labels.join(' ') : '無題';
-  }
-
-  // モードに応じた自動タイトルを算出する
-  function computeAutoTitle(mode, text) {
-    return mode === 'kanji' ? kanjiAutoTitle(text) : defaultTitleFromText(text);
   }
 
   function flashSaved() {
@@ -2716,7 +2306,7 @@
     if (currentFileId) {
       const f = savedFiles.find((x) => x.id === currentFileId);
       if (!f) return false;
-      return f.text !== input.value || f.mode !== state.mode;
+      return f.text !== input.value;
     }
     return input.value.trim() !== '';
   }
@@ -2749,13 +2339,12 @@
     modalContext = null;
   }
 
-  // 既存ファイルの内容を保存する（単漢字モードなら保存前に自動で再グループ化する）
+  // 既存ファイルの内容を保存する
   function saveExistingFile() {
-    if (state.mode === 'kanji') performGrouping();
     const idx = savedFiles.findIndex((f) => f.id === currentFileId);
     if (idx < 0) return;
     savedFiles[idx].text = input.value;
-    savedFiles[idx].mode = state.mode;
+    savedFiles[idx].mode = 'sentence'; // 単漢字モードは廃止。以前のバージョン向けに項目だけ残す
     savedFiles[idx].updatedAt = Date.now();
     persistSavedFiles();
   }
@@ -2802,19 +2391,18 @@
       let title = typedTitle;
       if (idx >= 0) {
         // 空欄にしたときは、そのファイルの中身から自動タイトルをつけ直す
-        if (!title) title = computeAutoTitle(savedFiles[idx].mode, savedFiles[idx].text || '');
+        if (!title) title = defaultTitleFromText(savedFiles[idx].text || '');
         savedFiles[idx].title = title;
         persistSavedFiles();
       }
       if (modalContext.fileId === currentFileId) setTitleDisplay(title);
-      if (listScreen.classList.contains('open')) renderListRows();
+      if (!listScreen.hidden) renderListRows();
     } else {
-      if (state.mode === 'kanji') performGrouping(); // 保存時は自動で再グループ化する
-      const title = typedTitle || computeAutoTitle(state.mode, input.value);
+      const title = typedTitle || defaultTitleFromText(input.value);
       const file = {
         id: 'f' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8),
         title: title,
-        mode: state.mode,
+        mode: 'sentence', // 単漢字モードは廃止。以前のバージョン向けに項目だけ残す
         text: input.value,
         folderId: null, // アコーディオン化により「今開いているフォルダ」という概念がないため常にルートへ保存
         updatedAt: Date.now(),
@@ -2828,22 +2416,13 @@
     closeSaveModal();
   });
 
-  // ================= 保存一覧（左からスワイプインするメニュー） =================
-  function openListScreen() {
-    closeWordSheet();
+  // ================= 保存一覧ページ =================
+  // 保存一覧ページを表示する直前に呼ぶ：検索欄と一覧を今の状態に合わせて作り直す
+  function prepareListScreen() {
     updateListChrome();
     listSearchInput.value = listView.query;
     listSearchClear.hidden = !listView.query;
     renderListRows();
-    listScreen.classList.add('open');
-    listBackdrop.classList.add('open');
-  }
-  function closeListScreen() {
-    listScreen.classList.remove('open');
-    listBackdrop.classList.remove('open');
-  }
-  function isListScreenOpen() {
-    return listScreen.classList.contains('open');
   }
 
   function updateListChrome() {
@@ -3015,7 +2594,7 @@
 
     wrap.appendChild(actions);
     wrap.appendChild(row);
-    attachFileRowGestures(wrap, row, () => { loadFile(file); closeWordbookScreen(); closeAllKanjiScreen(); closeListScreen(); }, !opts.showFolder);
+    attachFileRowGestures(wrap, row, () => { loadFile(file); showTab('input'); }, !opts.showFolder);
     return wrap;
   }
 
@@ -3399,18 +2978,13 @@
     setTitleDisplay(file.title);
     // 保存済みのファイルは読むために開くことが多いので、入力欄は畳んで広く見せる
     setFocusMode(true);
-    state.mode = file.mode || 'sentence';
-    updateModeTabsUI();
     commitInputValue(file.text || '', { skipUndo: true });
     undoStack = [];
     undoBtn.disabled = true;
-    // 保存時は常にグループ分けされているはずなので、読み込み直後はグループ表示にする。
-    state.groupedView = parseKanjiLines(file.text || '').length > 0;
-    renderCurrentMode();
+    renderInputPage();
     // 開いた直後は入力中の状態にせず、常に先頭が見える状態にする
     input.blur();
     results.scrollTop = 0;
-    kanjiGrid.scrollTop = 0;
   }
 
   function startNewFile() {
@@ -3420,25 +2994,13 @@
     commitInputValue('', { skipUndo: true });
     undoStack = [];
     undoBtn.disabled = true;
-    state.groupedView = false;
-    renderCurrentMode();
+    renderInputPage();
   }
-
-  listBtn.addEventListener('click', () => {
-    if (isListScreenOpen()) { closeListScreen(); return; }
-    autoSaveBeforeLeaving();
-    openListScreen();
-  });
-  listBackdrop.addEventListener('click', closeListScreen);
-  listBackBtn.addEventListener('click', () => {
-    if (listView.query.trim()) { setQuery(''); return; }
-    closeListScreen();
-  });
 
   listNewBtn.addEventListener('click', () => {
     autoSaveBeforeLeaving();
-    closeListScreen();
     startNewFile();
+    showTab('input');
   });
 
   newBtn.addEventListener('click', () => {
@@ -3460,6 +3022,8 @@
     wordDeleteBtn.hidden = !wordSelectMode;
     wordDeleteBtn.disabled = selectedWords.size === 0;
     wordSelectCount.textContent = wordSelectMode && selectedWords.size ? selectedWords.size + '件選択中' : '';
+    // 選択中は表示切り替えを隠し、同じ場所に人名登録・解除・削除のボタンを出す
+    wordbookDisplayToggles.hidden = wordSelectMode;
   }
 
   function exitWordSelectMode() {
@@ -3627,53 +3191,52 @@
     });
   }
 
-  // skipFocus=trueのときは入力欄にフォーカスしない（起動直後にキーボードが勝手に出ないようにする）
-  function openWordbookScreen(skipFocus) {
-    closeAllKanjiScreen();
+  // ================= ページ切り替え（フッターのタブバー） =================
+  // 入力ページが土台で、保存一覧・単語帳・全漢字はその上に全画面で重ねる。表示するページだけhiddenを外す。
+  // opts.skipFocus=trueのときは追加欄にフォーカスしない（起動直後にキーボードが勝手に出ないようにする）
+  function showTab(tab, opts) {
+    opts = opts || {};
+    // 表示中のタブをもう一度押したときは、そのページの一番上までスクロールするだけ
+    if (tab === state.tab && !opts.force) {
+      const scroller = { list: listRows, input: results, wordbook: wordGrid, allKanji: allKanjiGrid }[tab];
+      if (scroller) scroller.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+    // 保存一覧へ移るときは、保存済みのファイルに未保存の変更があれば自動保存する
+    if (tab === 'list') autoSaveBeforeLeaving();
     closeWordSheet();
     exitWordSelectMode();
-    wordAddInput.value = '';
-    renderWordGrid();
-    wordbookScreen.hidden = false;
-    if (skipFocus !== true) setTimeout(() => wordAddInput.focus(), 0);
-  }
-  function closeWordbookScreen() {
-    wordbookScreen.hidden = true;
-  }
 
-  function openAllKanjiScreen() {
-    closeWordbookScreen();
-    closeWordSheet();
-    allKanjiAddInput.value = '';
-    renderAllKanjiGrid();
-    allKanjiScreen.hidden = false;
-    setTimeout(() => allKanjiAddInput.focus(), 0);
-  }
-  function closeAllKanjiScreen() {
-    allKanjiScreen.hidden = true;
+    if (tab === 'list') prepareListScreen();
+    if (tab === 'wordbook') { wordAddInput.value = ''; renderWordGrid(); }
+    if (tab === 'allKanji') { allKanjiAddInput.value = ''; renderAllKanjiGrid(); }
+    // 何も入力されていない状態で入力ページに移ったときは、すぐ書けるよう入力欄を開く
+    if (tab === 'input' && !input.value.trim()) setFocusMode(false);
+
+    listScreen.hidden = tab !== 'list';
+    wordbookScreen.hidden = tab !== 'wordbook';
+    allKanjiScreen.hidden = tab !== 'allKanji';
+    state.tab = tab;
+    updateTabBarUI();
+
+    if (!opts.skipFocus) {
+      if (tab === 'wordbook') setTimeout(() => wordAddInput.focus(), 0);
+      if (tab === 'allKanji') setTimeout(() => allKanjiAddInput.focus(), 0);
+    }
   }
 
-  modeFooterWordbookBtn.addEventListener('click', () => openWordbookScreen());
-  modeFooterAllKanjiBtn.addEventListener('click', openAllKanjiScreen);
-  modeFooterInputBtn.addEventListener('click', () => {
-    // 何も入力されていない状態で入力モードに移ったときは、すぐ書けるよう入力欄を開く
-    if (!input.value.trim()) setFocusMode(false);
-    closeWordbookScreen();
-    closeAllKanjiScreen();
-    closeListScreen();
-  });
-
-  wordbookMenuBtn.addEventListener('click', () => {
-    if (isListScreenOpen()) { closeListScreen(); return; }
-    autoSaveBeforeLeaving();
-    openListScreen();
-  });
-
-  allKanjiMenuBtn.addEventListener('click', () => {
-    if (isListScreenOpen()) { closeListScreen(); return; }
-    autoSaveBeforeLeaving();
-    openListScreen();
-  });
+  // 選択中のタブに色を付け、背景（#tabIndicator）をそのタブの位置へすべらせる
+  function updateTabBarUI() {
+    const idx = tabItems.findIndex((b) => b.dataset.tab === state.tab);
+    tabItems.forEach((b) => {
+      const on = b.dataset.tab === state.tab;
+      b.classList.toggle('active', on);
+      if (on) b.setAttribute('aria-current', 'page');
+      else b.removeAttribute('aria-current');
+    });
+    tabIndicator.style.transform = 'translateX(' + (Math.max(0, idx) * 100) + '%)';
+  }
+  tabItems.forEach((b) => b.addEventListener('click', () => showTab(b.dataset.tab)));
 
   // Enterを押すたびに1件ずつ、入力に含まれる漢字を全部登録する（重複は自動で無視）
   let allKanjiAddComposing = false;
@@ -3741,49 +3304,16 @@
     if (!nameModal.hidden) { finishName(null); return; }
     if (!folderPicker.hidden) { closeFolderPicker(); return; }
     if (!saveModal.hidden) { closeSaveModal(); return; }
-    if (!wordbookScreen.hidden) {
-      if (wordSelectMode) exitWordSelectMode();
-      else closeWordbookScreen();
-      return;
-    }
-    if (!allKanjiScreen.hidden) { closeAllKanjiScreen(); return; }
-    if (isListScreenOpen()) {
-      if (listView.query.trim()) setQuery('');
-      else closeListScreen();
-    }
+    if (state.tab === 'wordbook' && wordSelectMode) { exitWordSelectMode(); renderWordGrid(); return; }
+    if (state.tab === 'list' && listView.query.trim()) setQuery('');
   });
-
-  // ================= スマホでの左→右スワイプで保存一覧メニューを開く =================
-  let edgeSwipeStart = null;
-  document.addEventListener('pointerdown', (e) => {
-    if (e.pointerType !== 'touch') return;
-    if (isListScreenOpen()) return;
-    if (state.reordering) return;
-    if (!saveModal.hidden || !folderPicker.hidden || !nameModal.hidden) return;
-    edgeSwipeStart = { x: e.clientX, y: e.clientY, t: Date.now() };
-  }, { passive: true });
-  document.addEventListener('pointerup', (e) => {
-    if (!edgeSwipeStart) return;
-    const { x, y, t } = edgeSwipeStart;
-    edgeSwipeStart = null;
-    if (e.pointerType !== 'touch') return;
-    if (isListScreenOpen()) return;
-    if (state.reordering) return;
-    const dx = e.clientX - x;
-    const dy = e.clientY - y;
-    if (Date.now() - t > 700) return;
-    if (dx > 60 && Math.abs(dy) < 50 && dx > Math.abs(dy) * 1.5) {
-      openListScreen();
-    }
-  }, { passive: true });
-  document.addEventListener('pointercancel', () => { edgeSwipeStart = null; }, { passive: true });
 
   // ================= 画面の実高さをCSS変数へ反映 =================
   // iOSのホーム画面追加（standalone）表示では100dvhが実際の画面高さより小さく
   // 計算されるバグがあり、bodyの高さがOSの本当のビューポートより短くなる。
-  // bodyはtransformでposition:fixedな子要素（フッターやオーバーレイ画面）の基準に
+  // bodyはtransformでposition:fixedな子要素（タブバーや各ページ）の基準に
   // なっているので、window.innerHeight（無ければvisualViewport.height）を実測して
-  // --app-hに入れれば、フッター下に隙間ができる問題を解消できる。
+  // --app-hに入れれば、タブバーの下に隙間ができる問題を解消できる。
   function syncAppHeight() {
     const h = window.innerHeight || (window.visualViewport && window.visualViewport.height) || 0;
     if (h) document.documentElement.style.setProperty('--app-h', h + 'px');
@@ -3792,15 +3322,12 @@
   window.addEventListener('orientationchange', syncAppHeight);
   if (window.visualViewport) window.visualViewport.addEventListener('resize', syncAppHeight);
 
-  // ================= フッター2段の実測サイズをCSS変数へ反映 =================
-  // env(safe-area-inset-bottom)やbutton内のstretch挙動はブラウザ差が出やすいため、
-  // calc()に頼らず実際に描画された高さを測って var(--toolfooter-h) / var(--footer-total-h) に入れる。
+  // ================= タブバーが占める高さをCSS変数へ反映 =================
+  // env(safe-area-inset-bottom)を含む位置はブラウザ差が出やすいため、実際に描画された位置を測って
+  // 「画面下端からタブバー上端まで」の高さを var(--footer-total-h) に入れる（各ページの下余白に使う）。
   function syncFooterOffsets() {
-    const toolH = toolFooter.offsetHeight;
-    const modeH = modeFooter.offsetHeight;
-    modeFooter.style.bottom = toolH + 'px';
-    document.documentElement.style.setProperty('--toolfooter-h', toolH + 'px');
-    document.documentElement.style.setProperty('--footer-total-h', (toolH + modeH) + 'px');
+    const h = document.body.getBoundingClientRect().bottom - tabBar.getBoundingClientRect().top;
+    document.documentElement.style.setProperty('--footer-total-h', Math.max(0, Math.round(h)) + 'px');
   }
   window.addEventListener('resize', syncFooterOffsets);
   window.addEventListener('orientationchange', syncFooterOffsets);
@@ -3808,12 +3335,14 @@
   // ================= 起動 =================
   lastCommittedValue = input.value;
   setTitleDisplay('');
-  updateModeTabsUI();
   setFocusMode(state.focusMode);
   autoGrow();
-  renderCurrentMode();
-  // アプリを開いたときは単語帳ページから始める
-  openWordbookScreen(true);
+  updateDisplayTogglesUI();
+  renderInputPage();
+  // アプリを開いたときは単語帳ページから始める（起動時はタブの背景をすべらせずにその位置へ置く）
+  tabIndicator.style.transition = 'none';
+  showTab('wordbook', { skipFocus: true, force: true });
+  requestAnimationFrame(() => requestAnimationFrame(() => { tabIndicator.style.transition = ''; }));
   syncAppHeight();
   syncFooterOffsets();
 
