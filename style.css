@@ -140,6 +140,8 @@ input, textarea{ caret-color:var(--seal); }
 .pillGroup.dangerPill{ color:#ff8577; background:rgba(255,69,58,0.2); border-color:rgba(255,105,90,0.4); }
 .dangerPill[disabled]{ opacity:0.4; }
 .dispToggle.active{ background:var(--seal); color:var(--ink); }
+/* そのページでは使わない切り替え（全漢字の声調）：位置はそろえたまま薄くして押せなくする */
+.dispToggle[disabled]{ opacity:0.35; }
 /* 「日本漢字」はピンインの表示切り替えとは性格が違うので、押していないときも背景だけ薄い水色にして区別する（文字色・枠は他のボタンと同じ） */
 .dispToggle[data-toggle="ja"]{ background:rgba(147,209,242,0.12); }
 .dispToggle[data-toggle="ja"].active{ background:var(--ja-accent); color:var(--ink); }
@@ -385,10 +387,11 @@ main{
   position:fixed; left:8px; right:8px;
   bottom:calc(var(--footer-total-h) + 6px);
   z-index:70;
-  background:var(--glass-bg);
+  /* 手前に出てくるものほど明るく（iOSのダークモードの奥行きの付け方）。ページより一段明るいすりガラスにして、出たことに気づきやすくする */
+  background:rgba(74,70,63,0.9);
   -webkit-backdrop-filter:var(--glass-blur);
   backdrop-filter:var(--glass-blur);
-  border:0.5px solid var(--glass-border);
+  border:0.5px solid rgba(217,208,189,0.24);
   border-radius:30px;
   box-shadow:0 -8px 30px rgba(0,0,0,0.45);
   max-height:45vh;
@@ -400,13 +403,16 @@ main{
   pointer-events:none;
 }
 #wordSheet.open{ transform:translateY(0); pointer-events:auto; }
-/* タップした漢字が画面下半分にあるときは、隠れないよう上から出す */
+/* タップした漢字が画面下半分にあるときは、隠れないよう上から出す。
+   ヘッダー（表示切り替えボタン）は隠さないよう、その下端（JSが --sheet-top に入れる）から少しすべり出しながら現れる */
 #wordSheet.fromTop{
-  top:calc(env(safe-area-inset-top) + 6px); bottom:auto;
+  top:var(--sheet-top, calc(env(safe-area-inset-top) + 6px)); bottom:auto;
   box-shadow:0 8px 30px rgba(0,0,0,0.45);
-  transform:translateY(calc(-100% - env(safe-area-inset-top) - 20px));
+  transform:translateY(-16px);
+  opacity:0;
+  transition:transform .22s ease, opacity .18s ease;
 }
-#wordSheet.fromTop.open{ transform:translateY(0); }
+#wordSheet.fromTop.open{ transform:translateY(0); opacity:1; }
 #wordSheet.fromTop .wordSheetHandle{ order:2; }
 #wordSheet.fromTop #wordSheetList{ order:1; }
 .wordSheetHandle{
@@ -416,10 +422,34 @@ main{
   flex:0 0 auto;
 }
 #wordSheetList{
+  position:relative;
   overflow-y:auto;
   padding:6px 22px 18px;
   display:flex; flex-direction:column; gap:12px;
 }
+/* 続きがある側の端を透けさせて、スクロールできることを示す */
+#wordSheetList.moreBelow{
+  -webkit-mask-image:linear-gradient(to bottom, #000 calc(100% - 36px), transparent);
+  mask-image:linear-gradient(to bottom, #000 calc(100% - 36px), transparent);
+}
+#wordSheetList.moreAbove{
+  -webkit-mask-image:linear-gradient(to top, #000 calc(100% - 28px), transparent);
+  mask-image:linear-gradient(to top, #000 calc(100% - 28px), transparent);
+}
+#wordSheetList.moreAbove.moreBelow{
+  -webkit-mask-image:linear-gradient(to bottom, transparent, #000 28px, #000 calc(100% - 36px), transparent);
+  mask-image:linear-gradient(to bottom, transparent, #000 28px, #000 calc(100% - 36px), transparent);
+}
+/* シートが出ている間は、後ろの一覧を少し暗くする（見た目だけ。別の漢字はそのままタップできる）。
+   ヘッダーは暗くせず、タップ中の漢字だけは暗くする幕より手前に出す */
+#allKanjiScreen::after{
+  content:''; position:absolute; inset:0; z-index:10;
+  background:rgba(0,0,0,0.32);
+  opacity:0; pointer-events:none;
+  transition:opacity .22s ease;
+}
+body.wordSheetOpen #allKanjiScreen::after{ opacity:1; }
+.kcard.wordActive{ z-index:11; }
 .wordSheetItem{ display:flex; align-items:baseline; gap:12px; }
 .wordSheetHz{ font-size:22px; font-weight:700; color:var(--paper); letter-spacing:1px; }
 .wordSheetPy{ font-size:19px; font-weight:600; color:var(--seal); letter-spacing:0.2px; }

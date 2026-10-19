@@ -978,18 +978,59 @@
   }
   function openWordSheetFor(ch, cardEl, base) {
     if (!renderWordSheetContent(ch, base, cardEl ? cardEl.dataset.readingTone : '')) return;
+    if (ch !== activeWordChar || (base || '') !== activeWordBase) wordSheetList.scrollTop = 0;
     activeWordChar = ch;
     activeWordBase = base || '';
-    // タップした漢字が画面下半分にある場合は、シートに隠れないよう上から出す
+    const winH = window.innerHeight;
+    let cap = winH * 0.45;
     if (cardEl) {
       const rect = cardEl.getBoundingClientRect();
-      wordSheet.classList.toggle('fromTop', rect.top > window.innerHeight / 2);
+      // タップした漢字が画面下半分にある場合は、シートに隠れないよう上から出す。
+      // 上から出すときはヘッダー（表示切り替えボタン）を隠さないよう、その下端から出す
+      const fromTop = rect.top > winH / 2;
+      wordSheet.classList.toggle('fromTop', fromTop);
+      if (fromTop) {
+        const topEdge = allKanjiScreen.querySelector('.pageTop').getBoundingClientRect().bottom + 6;
+        wordSheet.style.setProperty('--sheet-top', topEdge + 'px');
+        cap = Math.min(cap, rect.top - topEdge - 10);
+      } else {
+        const sheetBottom = tabBar.getBoundingClientRect().top - 6;
+        cap = Math.min(cap, sheetBottom - rect.bottom - 10);
+      }
     }
+    fitWordSheet(Math.max(cap, 120));
     wordSheet.classList.add('open');
+    document.body.classList.add('wordSheetOpen');
     setActiveWordCard(cardEl);
   }
+  // シートの高さを決める。単語が全部入らないときは、最後に見える単語がちょうど半分で切れる高さにして
+  // 「下にまだ続きがある」と分かるようにする（iOSの一覧でよく使われる見せ方）
+  function fitWordSheet(cap) {
+    wordSheetList.style.maxHeight = '';
+    wordSheet.style.maxHeight = cap + 'px';
+    const avail = wordSheetList.clientHeight;
+    if (wordSheetList.scrollHeight > avail + 1) {
+      const items = wordSheetList.children;
+      let h = 0;
+      for (let i = 0; i < items.length; i++) {
+        const half = items[i].offsetTop + items[i].offsetHeight / 2;
+        if (half > avail) break;
+        h = half;
+      }
+      if (h) wordSheetList.style.maxHeight = h + 'px';
+    }
+    updateWordSheetFades();
+  }
+  // 続きがある側の端だけを透けさせる（一番上・一番下までスクロールしたらその側は消える）
+  function updateWordSheetFades() {
+    const el = wordSheetList;
+    el.classList.toggle('moreAbove', el.scrollTop > 1);
+    el.classList.toggle('moreBelow', el.scrollTop + el.clientHeight < el.scrollHeight - 1);
+  }
+  wordSheetList.addEventListener('scroll', updateWordSheetFades, { passive: true });
   function closeWordSheet() {
     wordSheet.classList.remove('open');
+    document.body.classList.remove('wordSheetOpen');
     setActiveWordCard(null);
     activeWordChar = null;
     activeWordBase = '';
@@ -1271,7 +1312,11 @@
       },
     },
   ];
+  // 全漢字ページでは声調カーブは使わないので、並び順をほかのページとそろえたまま押せない（薄い）状態にする
+  const DISABLED_TOGGLES = { allKanjiScreen: ['contour'] };
   document.querySelectorAll('.displayToggles').forEach((box) => {
+    const screen = box.closest('.pageScreen');
+    const disabledKeys = (screen && DISABLED_TOGGLES[screen.id]) || [];
     DISPLAY_TOGGLES.forEach((t) => {
       if (t.hidden) return;
       const btn = document.createElement('button');
@@ -1283,6 +1328,7 @@
       // アイコン（あれば）＋文字
       btn.innerHTML = (t.icon || '') + '<span>' + escapeHtml(t.label) + '</span>';
       btn.addEventListener('click', () => applyDisplaySettingChange(t.apply));
+      if (disabledKeys.includes(t.key)) btn.disabled = true;
       box.appendChild(btn);
     });
   });
