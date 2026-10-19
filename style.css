@@ -164,6 +164,9 @@ input, textarea{ caret-color:var(--seal); }
 #renameBtn svg{ width:13px; height:13px; }
 /* 「新規」は保存とは別の、文字付きの囲みボタン（保存一覧の書き出し・読み込み・新規と同じ見た目） */
 #newBtn.pillGroupBtn{ height:32px; padding:0 12px; font-size:12px; }
+/* 元に戻す：新規と同じ質感の丸いアイコンボタン。戻せる履歴がないときは薄くする */
+#undoBtn.pillGroupBtn{ width:32px; height:32px; min-width:0; padding:0; }
+#undoBtn[disabled]{ opacity:0.4; }
 #saveBtn{
   display:flex; align-items:center; gap:5px;
   background:transparent;
@@ -222,8 +225,10 @@ input, textarea{ caret-color:var(--seal); }
 }
 
 /* ---------- input ---------- */
+/* 入力欄（と取っ手）の右に、入力中だけ「すべて消す」ボタンが出る（単語帳・全漢字の入力バーと同じ動き） */
 #inputWrap{
   flex:0 0 auto;
+  display:flex; align-items:flex-end;
   padding:4px 10px 10px;
   position:relative;
   overflow:visible;
@@ -236,6 +241,7 @@ body.focusMode #inputWrap{
   background:var(--input-bg);
   border-bottom-color:transparent;
 }
+#inputField{ flex:1 1 auto; min-width:0; position:relative; }
 #zhInput{
   width:100%;
   min-height:40px;
@@ -245,7 +251,7 @@ body.focusMode #inputWrap{
   color:var(--input-text);
   border:none;
   border-radius:12px 12px 0 12px;
-  padding:9px 60px 9px 12px;
+  padding:9px 12px;
   font-size:17px;
   line-height:1.4;
   font-family:var(--font-zh);
@@ -261,14 +267,9 @@ body.focusMode #zhInput{
   overflow:hidden;
   pointer-events:none;
 }
-.inputTools{
-  position:absolute; top:12px; right:16px; display:flex; gap:6px;
-  transition:opacity .2s ease;
-}
-body.focusMode .inputTools{ opacity:0; pointer-events:none; }
 /* 入力欄の下端にぴったり貼り付いた取っ手。右端は入力欄の右端に揃え、角丸側（入力欄の右下）は0にして噛み合わせる */
 #focusToggle{
-  position:absolute; right:10px; bottom:-12px; z-index:3;
+  position:absolute; right:0; bottom:-22px; z-index:3;
   display:flex; align-items:center; justify-content:center;
   width:44px; height:20px;
   padding:0;
@@ -278,24 +279,14 @@ body.focusMode .inputTools{ opacity:0; pointer-events:none; }
   background:var(--input-bg-dim);
   color:var(--input-text);
   box-shadow:0 3px 5px rgba(0,0,0,0.35);
-  transition:bottom .25s ease, scale .35s var(--press-spring);
+  transition:bottom .25s ease, right .25s ease, scale .35s var(--press-spring);
 }
 #focusToggle svg{ width:13px; height:13px; display:block; transition:transform .2s ease; }
 #focusToggle.active svg{ transform:rotate(180deg); }
 /* 畳んだ帯（高さ5px）から完全にぶら下がるよう、帯の下端に揃える */
-body.focusMode #focusToggle{ bottom:-20px; }
-.miniBtn{
-  width:22px; height:22px; border-radius:999px;
-  background:rgba(217,208,189,0.14);
-  border:none;
-  display:flex; align-items:center; justify-content:center;
-  color:var(--input-text);
-  padding:0;
-}
-.miniBtn[disabled]{ opacity:0.35; }
-.miniBtn svg{ width:12px; height:12px; display:block; }
-#clearBtn{ visibility:hidden; }
-#clearBtn.show{ visibility:visible; }
+body.focusMode #focusToggle{ bottom:-25px; right:10px; }
+#inputWrap:focus-within #clearBtn{ width:40px; margin-left:8px; opacity:1; pointer-events:auto; }
+body.focusMode #inputWrap #clearBtn{ width:0; margin-left:0; opacity:0; pointer-events:none; }
 
 main{
   position:absolute; inset:0;
@@ -545,16 +536,22 @@ main{
 }
 .folderBody > * + *::before{ left:40px; }
 .listRowWrap{ position:relative; overflow:hidden; }
-.listRowActions{ position:absolute; top:0; right:0; bottom:0; display:flex; }
-.rowActionBtn{
-  width:64px; border:none; padding:0;
-  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px;
-  font-size:10px; font-weight:700;
+/* 左スワイプで出るボタン：iOSのメッセージ・メールと同じ、アイコンだけの丸いボタンを行の右に横並びにする */
+.listRowActions{
+  position:absolute; top:0; right:0; bottom:0;
+  display:flex; align-items:center; gap:8px;
+  padding:0 12px 0 8px;
 }
-.rowActionBtn svg{ width:15px; height:15px; }
+.rowActionBtn{
+  flex:0 0 auto;
+  width:40px; height:40px; border:none; padding:0;
+  border-radius:999px;
+  display:flex; align-items:center; justify-content:center;
+}
+.rowActionBtn svg{ width:19px; height:19px; display:block; }
 .actMove{ background:var(--paper-dim); color:var(--ink); }
-.actDuplicate{ background:var(--seal-soft); color:var(--paper); }
-.actDelete{ background:var(--seal); color:var(--ink); }
+.actDuplicate{ background:var(--seal); color:var(--ink); }
+.actDelete{ background:var(--warn); color:var(--ink); }
 .listRow{
   position:relative; background:var(--card);
   display:flex; align-items:center; justify-content:space-between; gap:10px;

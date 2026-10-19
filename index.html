@@ -30,6 +30,10 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg>
         </button>
       </div>
+      <!-- 元に戻す（iOSのメモと同じく、入力欄の中ではなく上部のボタン列に置く） -->
+      <button id="undoBtn" class="pillGroup pillGroupBtn" type="button" aria-label="元に戻す" title="元に戻す" disabled>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10a7 7 0 1 1 2 4.9"></path><polyline points="3 4 3 10 9 10"></polyline></svg>
+      </button>
       <button id="newBtn" class="pillGroup pillGroupBtn" type="button" title="新規作成">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg><span>新規</span>
       </button>
@@ -40,17 +44,16 @@
     </div>
 
     <div id="inputWrap">
-      <textarea id="zhInput" rows="1" placeholder="ここに入力／貼り付け" autocapitalize="off" autocorrect="off" spellcheck="false"></textarea>
-      <div class="inputTools">
-        <button id="undoBtn" class="miniBtn" type="button" title="元に戻す" disabled>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10a7 7 0 1 1 2 4.9"></path><polyline points="3 4 3 10 9 10"></polyline></svg>
-        </button>
-        <button id="clearBtn" class="miniBtn" type="button" title="クリア">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="5" y1="5" x2="19" y2="19"></line><line x1="19" y1="5" x2="5" y2="19"></line></svg>
+      <!-- 取っ手は入力欄の右下に貼り付けるので、入力欄と一緒に包んで右端を揃える -->
+      <div id="inputField">
+        <textarea id="zhInput" rows="1" placeholder="ここに入力／貼り付け" autocapitalize="off" autocorrect="off" spellcheck="false"></textarea>
+        <button id="focusToggle" type="button" aria-pressed="false" title="入力欄を畳んで広く表示">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 11 12 6 7 11"></polyline><polyline points="17 18 12 13 7 18"></polyline></svg>
         </button>
       </div>
-      <button id="focusToggle" type="button" aria-pressed="false" title="入力欄を畳んで広く表示">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 11 12 6 7 11"></polyline><polyline points="17 18 12 13 7 18"></polyline></svg>
+      <!-- 入力中だけ右に出る「すべて消す」ボタン（単語帳・全漢字の入力バーと同じ動き） -->
+      <button id="clearBtn" class="fieldClearBtn" type="button" aria-label="入力をすべて消す" title="入力をすべて消す" tabindex="-1">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"></line><line x1="18" y1="6" x2="6" y2="18"></line></svg>
       </button>
     </div>
 
@@ -118,9 +121,6 @@
             </button>
             <button id="importBtn" class="pillGroupBtn" type="button" title="バックアップを読み込む（JSONファイル）">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3"></path><polyline points="7 8 12 3 17 8"></polyline><path d="M4 19h16"></path></svg><span>読み込み</span>
-            </button>
-            <button id="listNewBtn" class="pillGroupBtn" type="button" title="新規作成">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg><span>新規</span>
             </button>
           </div>
           <input id="importFileInput" type="file" accept="application/json,.json" hidden>
@@ -254,7 +254,6 @@
   const modalSaveBtn = document.getElementById('modalSaveBtn');
 
   const listScreen = document.getElementById('listScreen');
-  const listNewBtn = document.getElementById('listNewBtn');
   const newBtn = document.getElementById('newBtn');
   const listRows = document.getElementById('listRows');
   const exportBtn = document.getElementById('exportBtn');
@@ -780,6 +779,8 @@
     autoGrow();
   }
 
+  // 入力中に押してもキーボードが閉じないよう、押した瞬間のフォーカス移動を止める
+  undoBtn.addEventListener('pointerdown', (e) => e.preventDefault());
   undoBtn.addEventListener('click', () => {
     if (!undoStack.length) return;
     clearTimeout(typingTimer);
@@ -1329,7 +1330,6 @@
     if (!keepWordSheet) closeWordSheet();
     const trimmed = input.value ? input.value.trim() : '';
     updateSurume(trimmed !== '');
-    clearBtn.classList.toggle('show', input.value.length > 0);
     updateSaveBtnDirtyState();
     renderSentence(scrollAnchor);
   }
@@ -1353,7 +1353,9 @@
     renderInputPage();
   });
 
-  clearBtn.addEventListener('click', () => {
+  // 押した瞬間に入力欄からフォーカスが外れるとボタン自体が引っ込むので、押し始めで処理してフォーカスを保つ
+  clearBtn.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
     commitInputValue('');
     input.focus();
     renderInputPage();
@@ -1812,19 +1814,12 @@
   }
 
   // iOSの「設定」アプリのように、角丸のカード（セクション）の中に行を並べる。
-  // 上のカード：新規フォルダ＋フォルダ（展開中はその下に中のファイル）、下のカード：フォルダに入っていないファイル
+  // 上のカード：フォルダ（展開中はその下に中のファイル）＋末尾に「フォルダを追加…」、下のカード：フォルダに入っていないファイル
   function renderListRows() {
     listRows.innerHTML = '';
 
     const folderSection = document.createElement('div');
     folderSection.className = 'listSection';
-    const newFolderBtn = document.createElement('button');
-    newFolderBtn.type = 'button';
-    newFolderBtn.className = 'newFolderRow';
-    newFolderBtn.innerHTML = FOLDER_PLUS_SVG + '<span>新規フォルダ</span>';
-    newFolderBtn.addEventListener('click', createFolderFlow);
-    folderSection.appendChild(newFolderBtn);
-
     folders.forEach((folder) => {
       folderSection.appendChild(makeFolderRow(folder));
       if (!expandedFolders.has(folder.id)) return;
@@ -1838,6 +1833,13 @@
       }
       folderSection.appendChild(body);
     });
+    // iOSの設定アプリの「〜を追加…」行と同じく、追加の操作はカードの最後の行に置く
+    const newFolderBtn = document.createElement('button');
+    newFolderBtn.type = 'button';
+    newFolderBtn.className = 'newFolderRow';
+    newFolderBtn.innerHTML = FOLDER_PLUS_SVG + '<span>フォルダを追加…</span>';
+    newFolderBtn.addEventListener('click', createFolderFlow);
+    folderSection.appendChild(newFolderBtn);
     listRows.appendChild(folderSection);
 
     const rootFiles = savedFiles
@@ -1875,7 +1877,9 @@
     const moveBtn = document.createElement('button');
     moveBtn.type = 'button';
     moveBtn.className = 'rowActionBtn actMove';
-    moveBtn.innerHTML = MOVE_SVG + '<span>移動</span>';
+    moveBtn.innerHTML = MOVE_SVG;
+    moveBtn.setAttribute('aria-label', '移動');
+    moveBtn.title = '移動';
     moveBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       openFolderPicker(file);
@@ -1884,7 +1888,9 @@
     const dup = document.createElement('button');
     dup.type = 'button';
     dup.className = 'rowActionBtn actDuplicate';
-    dup.innerHTML = COPY_SVG + '<span>複製</span>';
+    dup.innerHTML = COPY_SVG;
+    dup.setAttribute('aria-label', '複製');
+    dup.title = '複製';
     dup.addEventListener('click', (e) => {
       e.stopPropagation();
       duplicateFile(file);
@@ -1893,7 +1899,9 @@
     const del = document.createElement('button');
     del.type = 'button';
     del.className = 'rowActionBtn actDelete';
-    del.innerHTML = TRASH_SVG + '<span>削除</span>';
+    del.innerHTML = TRASH_SVG;
+    del.setAttribute('aria-label', '削除');
+    del.title = '削除';
     del.addEventListener('click', (e) => {
       e.stopPropagation();
       if (!window.confirm('「' + file.title + '」を削除しますか？')) return;
@@ -1957,7 +1965,9 @@
     const renameB = document.createElement('button');
     renameB.type = 'button';
     renameB.className = 'rowActionBtn actMove';
-    renameB.innerHTML = PENCIL_SVG + '<span>名前</span>';
+    renameB.innerHTML = PENCIL_SVG;
+    renameB.setAttribute('aria-label', '名前を変更');
+    renameB.title = '名前を変更';
     renameB.addEventListener('click', (e) => {
       e.stopPropagation();
       renameFolderFlow(folder);
@@ -1966,7 +1976,9 @@
     const delB = document.createElement('button');
     delB.type = 'button';
     delB.className = 'rowActionBtn actDelete';
-    delB.innerHTML = TRASH_SVG + '<span>削除</span>';
+    delB.innerHTML = TRASH_SVG;
+    delB.setAttribute('aria-label', '削除');
+    delB.title = '削除';
     delB.addEventListener('click', (e) => {
       e.stopPropagation();
       const n = fileCountInFolder(folder.id);
@@ -2015,7 +2027,6 @@
       else expandedFolders.add(folder.id);
       renderListRows();
     }, true, {
-      actionW: 128,
       attr: 'folderId',
       commit: commitFolderOrderFromDom,
       // 展開中に並び替えを始めたら、中身(.folderBody)を置き去りにしないよう先に畳む
@@ -2035,7 +2046,9 @@
   // （'fileId'→data-file-id、'folderId'→data-folder-id）を切り替え、その種類の行同士でだけ
   // 並び替えが完結するようにする（opts省略時はファイル行向けの既定値で動く）。
   function attachFileRowGestures(wrap, row, onOpen, enableReorder, opts) {
-    const ACTION_W = (opts && opts.actionW) || 192; // 移動・複製・削除の3ボタン分（64px × 3）
+    // 左スワイプで開く幅＝右に並ぶ丸ボタンの列の幅（ボタンの数で変わるので実寸を使う）
+    const actionsEl = wrap.querySelector('.listRowActions');
+    let ACTION_W = 0;
     const HOLD_MS = 380;
     const MOVE_CANCEL = 10;
     const itemAttr = (opts && opts.attr) || 'fileId';
@@ -2083,6 +2096,7 @@
           clearTimers();
           mode = Math.abs(dx) > Math.abs(dy) ? 'swipe' : 'scroll';
           if (mode === 'swipe') {
+            ACTION_W = actionsEl ? actionsEl.offsetWidth : 0;
             row.style.transition = 'none';
             try { row.setPointerCapture(pointerId); } catch (err) { /* noop */ }
           }
@@ -2177,7 +2191,8 @@
     function updatePlaceholder(y) {
       if (!placeholder) return;
       const others = fileWraps();
-      if (!others.length) { dragScope.appendChild(placeholder); return; }
+      // 並び替える相手がいなければ、ドラッグ開始時に置いた元の位置のまま（末尾の「フォルダを追加…」行より下へ行かないように）
+      if (!others.length) return;
       let target = null;
       for (let i = 0; i < others.length; i++) {
         const rr = others[i].getBoundingClientRect();
@@ -2266,8 +2281,8 @@
 
     mkItem('フォルダなし', !file.folderId, false, () => moveFileToFolder(file, null));
     folders.forEach((f) => mkItem(f.name, file.folderId === f.id, false, () => moveFileToFolder(file, f.id)));
-    mkItem('新規フォルダ…', false, true, async () => {
-      const nm = await askName('新規フォルダ', '');
+    mkItem('フォルダを追加…', false, true, async () => {
+      const nm = await askName('フォルダを追加', '');
       if (!nm) return;
       moveFileToFolder(file, addFolder(nm).id);
     });
@@ -2310,7 +2325,7 @@
   nameModal.addEventListener('click', (e) => { if (e.target === nameModal) finishName(null); });
 
   async function createFolderFlow() {
-    const nm = await askName('新規フォルダ', '');
+    const nm = await askName('フォルダを追加', '');
     if (!nm) return;
     addFolder(nm);
     renderListRows();
@@ -2346,12 +2361,6 @@
     undoBtn.disabled = true;
     renderInputPage();
   }
-
-  listNewBtn.addEventListener('click', () => {
-    autoSaveBeforeLeaving();
-    startNewFile();
-    showTab('input');
-  });
 
   newBtn.addEventListener('click', () => {
     autoSaveBeforeLeaving();
