@@ -158,4 +158,5 @@ const CUSTOM_WORDS = {
   "我的": "wǒ de",
   "你的": "nǐ de",
   "他的": "tā de",
+  "念叨": "niàn dao",
 };
