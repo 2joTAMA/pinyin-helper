@@ -159,4 +159,12 @@ const CUSTOM_WORDS = {
   "你的": "nǐ de",
   "他的": "tā de",
   "念叨": "niàn dao",
+  "率先": "shuài xiān",
+  "腕子": "wàn zi",
+  "脑子": "nǎo zi",
+  "剪子": "jiǎn zi",
+  "凳子": "dèng zi",
+  "箱子": "xiāng zi",
+  "裤子": "kù zi",
+  "汉子": "hàn zi",
 };
