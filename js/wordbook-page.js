@@ -121,7 +121,7 @@ function wordGroupInfo(word) {
   return null;
 }
 
-function renderWordGrid() {
+function buildWordGrid() {
   wordGrid.innerHTML = '';
   wordGrid.classList.toggle('contourMode', state.contourOn);
   wordbookIndex.innerHTML = '';
@@ -205,6 +205,10 @@ function renderWordGrid() {
 
   fitAllWordChipPy();
 }
+// 単語・人名登録・表示設定・並び順・選択モードが前回と同じなら、タブを開いても描き直さない
+const wordGridRenderer = createRenderSkipper(buildWordGrid,
+  () => [dataVersion, displayKey(), wordSortMode, wordSelectMode].join('|'));
+function renderWordGrid() { wordGridRenderer.render(); }
 const wordbookIndexHighlighter = createIndexHighlighter({
   screen: wordbookScreen, grid: wordGrid, index: wordbookIndex, groupSelector: '.wordGroup', key: 'groupKey',
 });

@@ -246,7 +246,7 @@ document.addEventListener('click', (e) => {
 // 子音インデックス（右端の目次）でジャンプする先の見出しがない“無子音”の音（ā/ān等）用のラベル
 const ALL_KANJI_INDEX_NO_INITIAL_LABEL = '·';
 
-function renderAllKanjiGrid() {
+function buildAllKanjiGrid() {
   allKanjiGrid.innerHTML = '';
   allKanjiIndex.innerHTML = '';
   if (!allKanji.length) {
@@ -312,6 +312,10 @@ function renderAllKanjiGrid() {
   allKanjiIndexHighlighter.refresh();
 }
 
+// 漢字・単語・表示設定が前回と同じなら、タブを開いても描き直さない（声調カーブはこのページでは使わないので見ない）
+const allKanjiGridRenderer = createRenderSkipper(buildAllKanjiGrid,
+  () => [dataVersion, state.jaKanjiOn, state.pinyinOff, state.toneType].join('|'));
+function renderAllKanjiGrid() { allKanjiGridRenderer.render(); }
 const allKanjiIndexHighlighter = createIndexHighlighter({
   screen: allKanjiScreen, grid: allKanjiGrid, index: allKanjiIndex, groupSelector: '.kgroup', key: 'initial',
 });

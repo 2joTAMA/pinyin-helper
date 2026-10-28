@@ -465,6 +465,31 @@ function attachSideIndexJump(opts) {
   opts.index.addEventListener('touchcancel', () => setActive(null));
 }
 
+// ================= タブを開いたときに、前回から何も変わっていなければ描き直さない（単語帳・全漢字で共用） =================
+// 単語が多いと一覧を作り直すのに時間がかかる（特に声調カーブ表示）ので、データ・表示設定・並び順などが
+// 前回描いたときと同じなら、前回の一覧をそのまま見せる（スクロール位置もそのまま）。
+// keyOf()は描き方を決める値をまとめた文字列を返す関数
+function createRenderSkipper(render, keyOf) {
+  let lastKey = null;
+  return {
+    // 必ず描き直す（追加・削除・並び替えなど、その場で操作したとき）
+    render() {
+      lastKey = keyOf();
+      render();
+    },
+    // 変わったときだけ描き直す。描き直さなかったときはfalseを返す
+    renderIfChanged() {
+      if (keyOf() === lastKey) return false;
+      this.render();
+      return true;
+    },
+  };
+}
+// 表示設定のうち、どのページの描き方にも関わるもの
+function displayKey() {
+  return [state.jaKanjiOn, state.contourOn, state.pinyinOff, state.toneType].join(',');
+}
+
 // ================= 描き直しても見ていた場所を保つ（単語帳・全漢字で共用） =================
 // 一覧（grid）で、上部（すりガラスのヘッダー）のすぐ下に最初に見えている項目と、その上端の位置を覚える。
 // selectorOf(el)は、描き直したあとに同じ項目を探すためのセレクタを返す
@@ -539,8 +564,11 @@ let folders = loadArray(FOLDER_KEY);
 
 // ---------- 単語帳（全漢字ページで漢字をタップしたときに関連語を出すための登録単語） ----------
 const WORDS_KEY = 'pinyinHelperWords_v1';
+// 単語・人名登録・全漢字のどれかが変わるたびに1増える（単語帳・全漢字ページを描き直す必要があるかの判定に使う）
+let dataVersion = 0;
 function persistWords() {
   wordsByCharIndex = null;
+  dataVersion++;
   saveArray(WORDS_KEY, savedWords);
 }
 let savedWords = loadArray(WORDS_KEY); // 新しく登録した単語が先頭
@@ -568,7 +596,10 @@ function deleteWords(words) {
 
 // ---------- 人名登録（単語帳の単語のうち、人名として登録したものの集合） ----------
 const PERSON_WORDS_KEY = 'pinyinHelperPersonWords_v1';
-function persistPersonWords() { saveArray(PERSON_WORDS_KEY, Array.from(personWords)); }
+function persistPersonWords() {
+  dataVersion++;
+  saveArray(PERSON_WORDS_KEY, Array.from(personWords));
+}
 let personWords = new Set(loadArray(PERSON_WORDS_KEY));
 // isPerson=trueで人名登録、falseで解除。1件でも変化があればtrueを返す
 function setWordsPersonStatus(words, isPerson) {
@@ -583,7 +614,10 @@ function setWordsPersonStatus(words, isPerson) {
 
 // ---------- 全漢字（単語帳とは別に、登録した漢字を常にピンインごとにグループ表示するページ） ----------
 const ALL_KANJI_KEY = 'pinyinHelperAllKanji_v1';
-function persistAllKanji() { saveArray(ALL_KANJI_KEY, allKanji); }
+function persistAllKanji() {
+  dataVersion++;
+  saveArray(ALL_KANJI_KEY, allKanji);
+}
 let allKanji = loadArray(ALL_KANJI_KEY); // 登録順（古い順）
 
 // 入力された文字列から漢字だけを取り出し、まだ登録していないものだけ末尾に追加する（重複は自動で無視）

@@ -346,18 +346,18 @@ main{
 .cTone{ width:19px; height:13px; margin-top:2px; }
 
 /* 声調カーブの記号。1文字ごとにSVG要素を作ると単語が多いときに配置計算が重いので、
-   data-tone属性（声調番号）に応じた形をマスク画像にして、朱色の背景を型抜きして描く。
+   data-tone属性（声調番号）に応じた形のSVGを背景画像として描く（朱色＝--sealの#c9704fをSVGの中に直接書いている）。
+   以前はマスク画像で朱色の背景を型抜きしていたが、iPhoneのSafariは要素ごとのマスクの描画が重く、
+   単語が多い単語帳の声調カーブ表示でタブの切り替え・並び替えが遅くなっていたので背景画像にした。
    1声=上の水平線／2声=45度の右肩上がり／3声=ピンインのˇと同じV字（下がって上がる）／4声=45度の右肩下がり／軽声(0または5)=点 */
 [data-tone]{
-  background-color:var(--seal);
-  -webkit-mask:var(--tone-mask) center / 100% 100% no-repeat;
-  mask:var(--tone-mask) center / 100% 100% no-repeat;
+  background:var(--tone-img) center / 100% 100% no-repeat;
 }
-[data-tone="1"]{ --tone-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 14'%3E%3Cline x1='4' y1='2' x2='16' y2='2' stroke='black' stroke-width='2.4' stroke-linecap='round'/%3E%3C/svg%3E"); }
-[data-tone="2"]{ --tone-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 14'%3E%3Cline x1='5' y1='12' x2='15' y2='2' stroke='black' stroke-width='2.4' stroke-linecap='round'/%3E%3C/svg%3E"); }
-[data-tone="3"]{ --tone-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 14'%3E%3Cpolyline points='4,8 10,13 16,8' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); }
-[data-tone="4"]{ --tone-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 14'%3E%3Cline x1='5' y1='2' x2='15' y2='12' stroke='black' stroke-width='2.4' stroke-linecap='round'/%3E%3C/svg%3E"); }
-[data-tone="0"], [data-tone="5"]{ --tone-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 14'%3E%3Ccircle cx='10' cy='7' r='2.3' fill='black'/%3E%3C/svg%3E"); }
+[data-tone="1"]{ --tone-img:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 14'%3E%3Cline x1='4' y1='2' x2='16' y2='2' stroke='%23c9704f' stroke-width='2.4' stroke-linecap='round'/%3E%3C/svg%3E"); }
+[data-tone="2"]{ --tone-img:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 14'%3E%3Cline x1='5' y1='12' x2='15' y2='2' stroke='%23c9704f' stroke-width='2.4' stroke-linecap='round'/%3E%3C/svg%3E"); }
+[data-tone="3"]{ --tone-img:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 14'%3E%3Cpolyline points='4,8 10,13 16,8' fill='none' stroke='%23c9704f' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); }
+[data-tone="4"]{ --tone-img:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 14'%3E%3Cline x1='5' y1='2' x2='15' y2='12' stroke='%23c9704f' stroke-width='2.4' stroke-linecap='round'/%3E%3C/svg%3E"); }
+[data-tone="0"], [data-tone="5"]{ --tone-img:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 14'%3E%3Ccircle cx='10' cy='7' r='2.3' fill='%23c9704f'/%3E%3C/svg%3E"); }
 
 /* ---------- 漢字カード（全漢字ページ） ---------- */
 .kgroup + .kgroup{ margin-top:14px; padding-top:12px; border-top:0.5px solid var(--sep); }

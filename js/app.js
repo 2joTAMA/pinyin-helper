@@ -133,8 +133,15 @@ function showTab(tab, opts) {
   exitWordSelectMode();
 
   if (tab === 'list') renderListRows();
-  if (tab === 'wordbook') { wordAddInput.value = ''; renderWordGrid(); }
-  if (tab === 'allKanji') { allKanjiAddInput.value = ''; renderAllKanjiGrid(); }
+  // 単語帳・全漢字は、前回開いたときから何も変わっていなければ描き直さない（見ていた位置もそのまま）
+  if (tab === 'wordbook') {
+    wordAddInput.value = '';
+    if (!wordGridRenderer.renderIfChanged()) wordbookIndexHighlighter.refresh();
+  }
+  if (tab === 'allKanji') {
+    allKanjiAddInput.value = '';
+    if (!allKanjiGridRenderer.renderIfChanged()) allKanjiIndexHighlighter.refresh();
+  }
   // 何も入力されていない状態で入力ページに移ったときは、すぐ書けるよう入力欄を開く
   if (tab === 'input' && !input.value.trim()) setFocusMode(false);
 
