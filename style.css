@@ -387,8 +387,6 @@ main{
   font-size:9px; font-weight:700; line-height:1;
   color:var(--seal);
 }
-.kcard.contourOn{ flex-direction:column; gap:1px; }
-.kcontour{ width:22px; height:15px; }
 
 /* ---------- 全漢字ページで漢字をタップしたときの単語シート ---------- */
 #wordSheet{
@@ -479,9 +477,6 @@ body.wordSheetOpen #allKanjiScreen::after{ opacity:1; }
   color:var(--paper);
 }
 .wordSheetPersonIcon svg{ width:100%; height:100%; display:block; }
-.wordSheetItem .contourRow{ align-items:flex-end; }
-.wordSheetItem .cChar{ font-size:22px; font-weight:700; }
-.wordSheetItem .cTone{ width:19px; height:13px; }
 
 /* ---------- ダイアログ（保存・フォルダ名・フォルダへ移動） ---------- */
 .modalOverlay{
@@ -531,6 +526,14 @@ body.wordSheetOpen #allKanjiScreen::after{ opacity:1; }
 .modalActions > button{ flex:1 1 0; height:46px; border:none; border-radius:999px; font-size:16px; font-weight:600; }
 .modalBtnGhost{ background:rgba(217,208,189,0.14); color:var(--paper); }
 .modalBtnPrimary{ background:var(--seal); color:var(--ink); font-weight:700; }
+/* 削除の確認では、実行するボタンを削除の赤にする（保存一覧のスワイプの削除ボタンと同じ色） */
+.modalBtnDanger{ background:var(--warn); color:var(--ink); font-weight:700; }
+/* 確認・お知らせの本文（改行をそのまま出す） */
+.modalMessage{
+  font-size:14px; line-height:1.55; color:var(--paper);
+  text-align:center; white-space:pre-line;
+  margin:-4px 4px 18px;
+}
 
 /* ---------- 単語帳・全漢字の入力バー（iOSの検索バーと同じ形と動き） ----------
    普段は全幅のカプセル。入力中（フォーカス中）は右端が縮んで、空いた所に丸い「すべて消す」ボタンが出る */

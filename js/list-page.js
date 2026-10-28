@@ -102,12 +102,12 @@ importFileInput.addEventListener('change', () => {
     try {
       data = JSON.parse(String(reader.result));
     } catch (e) {
-      alert('ファイルの読み込みに失敗しました（JSON形式が正しくないようです）');
+      showDialog({ title: '読み込めませんでした', message: 'ファイルの形式（JSON）が正しくないようです' });
       return;
     }
     if (!data || (data.app !== 'pinyin-helper' &&
         !['savedFiles', 'folders', 'words', 'personWords', 'allKanji'].some((k) => Array.isArray(data[k])))) {
-      alert('このファイルはバックアップ形式ではないようです');
+      showDialog({ title: '読み込めませんでした', message: 'このファイルはバックアップの形式ではないようです' });
       return;
     }
     const c = mergeImportedBackup(data);
@@ -119,9 +119,9 @@ importFileInput.addEventListener('change', () => {
     if (c.words) parts.push('単語' + c.words + '件');
     if (c.personWords) parts.push('人名登録' + c.personWords + '件');
     if (c.kanji) parts.push('漢字' + c.kanji + '字');
-    alert(parts.length
-      ? parts.join('、') + 'を読み込みました（既存のデータはそのまま残っています）'
-      : '新しく追加されたデータはありませんでした（すでに読み込み済みの可能性があります）');
+    showDialog(parts.length
+      ? { title: '読み込みました', message: parts.join('、') + 'を追加しました\n今までのデータもそのまま残っています' }
+      : { title: '追加されたデータはありません', message: 'すでに読み込み済みの可能性があります' });
   };
   reader.readAsText(file);
 });
@@ -220,8 +220,8 @@ function makeListRow(file) {
 
   actions.appendChild(makeRowActionBtn('actMove', MOVE_SVG, '移動', () => openFolderPicker(file)));
   actions.appendChild(makeRowActionBtn('actDuplicate', COPY_SVG, '複製', () => duplicateFile(file)));
-  actions.appendChild(makeRowActionBtn('actDelete', TRASH_SVG, '削除', () => {
-    if (!window.confirm('「' + file.title + '」を削除しますか？')) return;
+  actions.appendChild(makeRowActionBtn('actDelete', TRASH_SVG, '削除', async () => {
+    if (!(await confirmDelete('「' + file.title + '」を削除しますか？'))) return;
     savedFiles = savedFiles.filter((f) => f.id !== file.id);
     persistSavedFiles();
     detachDeletedCurrentFile();
@@ -278,12 +278,11 @@ function makeFolderRow(folder) {
   actions.className = 'listRowActions';
 
   actions.appendChild(makeRowActionBtn('actMove', PENCIL_SVG, '名前を変更', () => renameFolderFlow(folder)));
-  actions.appendChild(makeRowActionBtn('actDelete', TRASH_SVG, '削除', () => {
+  actions.appendChild(makeRowActionBtn('actDelete', TRASH_SVG, '削除', async () => {
     const n = fileCountInFolder(folder.id);
-    const msg = n
-      ? 'フォルダ「' + folder.name + '」を削除します。\n中の' + n + '件も一緒に削除されます。'
-      : 'フォルダ「' + folder.name + '」を削除しますか？';
-    if (!window.confirm(msg)) return;
+    const ok = await confirmDelete('フォルダ「' + folder.name + '」を削除しますか？',
+      n ? '中のファイル' + n + '件も一緒に削除されます' : '');
+    if (!ok) return;
     savedFiles = savedFiles.filter((f) => f.folderId !== folder.id);
     folders = folders.filter((x) => x.id !== folder.id);
     expandedFolders.delete(folder.id);

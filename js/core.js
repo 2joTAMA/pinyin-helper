@@ -65,6 +65,12 @@ const nameModalInput = document.getElementById('nameModalInput');
 const nameModalCancel = document.getElementById('nameModalCancel');
 const nameModalOk = document.getElementById('nameModalOk');
 
+const appDialog = document.getElementById('appDialog');
+const appDialogTitle = document.getElementById('appDialogTitle');
+const appDialogMessage = document.getElementById('appDialogMessage');
+const appDialogCancel = document.getElementById('appDialogCancel');
+const appDialogOk = document.getElementById('appDialogOk');
+
 // ================= pinyin-proの準備・簡体字への正規化・日本の字体での表示 =================
 const pp = window.pinyinPro;
 if (pp && pp.customPinyin) {
@@ -608,6 +614,41 @@ const COPY_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" str
 const PERSON_SVG = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"></path></svg>';
 
 // ================= ページをまたいで使う部品 =================
+// アプリ専用の確認・お知らせダイアログ（iPhone標準のconfirm/alertは見た目がアプリと違うので使わない）。
+// opts: title（太字の1行目）, message（本文。改行可）, okLabel（既定は「OK」）,
+//       cancelLabel（省略するとOKだけのお知らせになる）, danger（OKを削除の赤いボタンにする）
+// OKでtrue、キャンセル・背景のタップ・Escキーでfalseを返すPromise
+let appDialogResolve = null;
+function showDialog(opts) {
+  return new Promise((resolve) => {
+    if (appDialogResolve) appDialogResolve(false);
+    appDialogResolve = resolve;
+    appDialogTitle.textContent = opts.title || '';
+    appDialogTitle.hidden = !opts.title;
+    appDialogMessage.textContent = opts.message || '';
+    appDialogMessage.hidden = !opts.message;
+    appDialogOk.textContent = opts.okLabel || 'OK';
+    appDialogOk.className = opts.danger ? 'modalBtnDanger' : 'modalBtnPrimary';
+    appDialogCancel.textContent = opts.cancelLabel || '';
+    appDialogCancel.hidden = !opts.cancelLabel;
+    appDialog.hidden = false;
+  });
+}
+function finishDialog(result) {
+  if (!appDialogResolve) return;
+  const r = appDialogResolve;
+  appDialogResolve = null;
+  appDialog.hidden = true;
+  r(result);
+}
+appDialogOk.addEventListener('click', () => finishDialog(true));
+appDialogCancel.addEventListener('click', () => finishDialog(false));
+appDialog.addEventListener('click', (e) => { if (e.target === appDialog) finishDialog(false); });
+// 削除の確認（削除するならtrue）
+function confirmDelete(title, message) {
+  return showDialog({ title, message, okLabel: '削除', cancelLabel: 'キャンセル', danger: true });
+}
+
 // 保存時にタイトルが空欄だったときに使う自動タイトル：先頭の文字を適度な文字数だけ抽出
 function defaultTitleFromText(text) {
   const flat = text.replace(/\s+/g, '').trim();

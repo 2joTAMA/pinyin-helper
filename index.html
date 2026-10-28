@@ -227,6 +227,18 @@
     </div>
   </div>
 
+  <!-- 確認・お知らせ用のダイアログ（iPhone標準のconfirm/alertの代わり。js/core.js の showDialog で使う） -->
+  <div id="appDialog" class="modalOverlay" hidden>
+    <div class="modalCard">
+      <div class="modalTitle" id="appDialogTitle"></div>
+      <div class="modalMessage" id="appDialogMessage"></div>
+      <div class="modalActions">
+        <button id="appDialogCancel" class="modalBtnGhost" type="button">キャンセル</button>
+        <button id="appDialogOk" class="modalBtnPrimary" type="button">OK</button>
+      </div>
+    </div>
+  </div>
+
   <div id="surume"><img src="images/surume.png" alt=""></div>
 
 <!-- 漢字→ピンイン変換ライブラリ pinyin-pro（配布版をそのまま置いている） -->

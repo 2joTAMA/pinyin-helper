@@ -17,8 +17,7 @@ function attachKanjiLongPress(card, ch) {
       // 指を離したときのclickで単語シートが開かないようにする
       card.dataset.longPressed = '1';
       if (wordsContaining(ch).length) return;
-      if (!window.confirm('「' + ch + '」を全漢字から削除しますか？')) return;
-      deleteAllKanji(ch);
+      confirmDelete('「' + ch + '」を全漢字から削除しますか？').then((ok) => { if (ok) deleteAllKanji(ch); });
     }, KANJI_HOLD_MS);
   });
   card.addEventListener('pointermove', (e) => {
@@ -37,6 +36,8 @@ function deleteAllKanji(ch) {
 }
 
 // ================= 全漢字ページの漢字カード =================
+// 全漢字ページでは声調カーブは使わない。ほかのページで声調カーブをONにしていても、ここでは
+// 普通の表示にする（ONの状態は覚えたままなので、ほかのページに戻ればまたカーブで表示される）。
 // 漢字だけを大きく表示。声調数字は123トグルON時のみ右肩に小さく（絶対配置なのでレイアウトは動かない）。
 // 単語帳にその漢字を含む単語が1つもないときはタップしても何も起きないので、少し薄い色で示す。
 // opts.base/opts.tone（全漢字ページ用）：多音字をどの読みとして表示しているか。
@@ -47,7 +48,7 @@ function makeCard(ch, opts) {
   const toneDigit = opts && opts.tone != null ? opts.tone : getToneDigit(ch);
   const hasWord = wordsForChar(ch, base).length > 0;
   const card = document.createElement('div');
-  card.className = 'kcard' + (state.contourOn ? ' contourOn' : '');
+  card.className = 'kcard';
   card.dataset.char = ch;
   if (base) card.dataset.base = base;
   // このカードが表している声調（単語シートで、違う声調で読まれている音節に下線を引くのに使う）。
@@ -59,18 +60,11 @@ function makeCard(ch, opts) {
   renderDisplayText(hz, ch);
   card.appendChild(hz);
 
-  if (state.contourOn) {
-    const contour = document.createElement('span');
-    contour.className = 'kcontour';
-    setToneContour(contour, toneDigit);
-    card.appendChild(contour);
-  } else {
-    const tone = document.createElement('span');
-    tone.className = 'ktone';
-    const showTone = (state.toneType === 'num' && !state.pinyinOff) || (opts && opts.alwaysShowTone);
-    tone.textContent = showTone ? toneDigit : '';
-    card.appendChild(tone);
-  }
+  const tone = document.createElement('span');
+  tone.className = 'ktone';
+  const showTone = (state.toneType === 'num' && !state.pinyinOff) || (opts && opts.alwaysShowTone);
+  tone.textContent = showTone ? toneDigit : '';
+  card.appendChild(tone);
 
   attachKanjiLongPress(card, ch);
   card.addEventListener('click', () => {
@@ -114,14 +108,8 @@ function renderWordPinyin(el, word, mark) {
     });
   });
 }
-// 人名登録した単語の目印（ピンインの末尾、声調カーブ表示では漢字の後ろに添える）
-function makeWordSheetPersonIcon() {
-  const icon = document.createElement('span');
-  icon.className = 'wordSheetPersonIcon';
-  icon.innerHTML = PERSON_SVG;
-  return icon;
-}
-// 現在の表示設定（声調123／声調カーブ／日本字体）に合わせて中身だけを作り直す。
+// 現在の表示設定（声調123／ピンインなし／日本字体）に合わせて中身だけを作り直す。
+// 全漢字ページのシートなので、カードと同じく声調カーブは使わない。
 // tone：タップしたカードの声調。これと違う声調で読まれている音節に下線を引く
 function renderWordSheetContent(ch, base, tone) {
   const matches = wordsForChar(ch, base);
@@ -129,23 +117,21 @@ function renderWordSheetContent(ch, base, tone) {
   matches.forEach((w) => {
     const item = document.createElement('div');
     item.className = 'wordSheetItem';
-    if (state.contourOn) {
-      const row = document.createElement('div');
-      row.className = 'contourRow';
-      appendContourCols(row, w);
-      item.appendChild(row);
-      if (personWords.has(w)) item.appendChild(makeWordSheetPersonIcon());
-    } else {
-      const hz = document.createElement('div');
-      hz.className = 'wordSheetHz';
-      renderDisplayText(hz, w);
-      const py = document.createElement('div');
-      py.className = 'wordSheetPy';
-      if (!state.pinyinOff) renderWordPinyin(py, w, { ch, base, tone });
-      if (personWords.has(w)) py.appendChild(makeWordSheetPersonIcon());
-      item.appendChild(hz);
-      item.appendChild(py);
+    const hz = document.createElement('div');
+    hz.className = 'wordSheetHz';
+    renderDisplayText(hz, w);
+    const py = document.createElement('div');
+    py.className = 'wordSheetPy';
+    if (!state.pinyinOff) renderWordPinyin(py, w, { ch, base, tone });
+    // 人名登録した単語の目印：ピンインの末尾に人アイコンを添える
+    if (personWords.has(w)) {
+      const icon = document.createElement('span');
+      icon.className = 'wordSheetPersonIcon';
+      icon.innerHTML = PERSON_SVG;
+      py.appendChild(icon);
     }
+    item.appendChild(hz);
+    item.appendChild(py);
     // 左にスワイプすると削除ボタンが出る（保存一覧の行と同じ部品・同じ動き）
     const wrap = document.createElement('div');
     wrap.className = 'listRowWrap wordSheetRowWrap';

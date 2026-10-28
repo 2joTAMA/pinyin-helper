@@ -69,7 +69,8 @@ const DISPLAY_TOGGLES = [
     },
   },
 ];
-// 全漢字ページでは声調カーブは使わないので、並び順をほかのページとそろえたまま押せない（薄い）状態にする
+// 全漢字ページでは声調カーブは使わないので、並び順をほかのページとそろえたまま押せない（薄い）状態にする。
+// 声調カーブがONのままでも、このページのボタンは点灯させない（ONの状態はほかのページのボタンに残る）
 const DISABLED_TOGGLES = { allKanjiScreen: ['contour'] };
 document.querySelectorAll('.displayToggles').forEach((box) => {
   const screen = box.closest('.pageScreen');
@@ -94,7 +95,7 @@ function updateDisplayTogglesUI() {
   document.body.classList.toggle('jaKanjiOn', state.jaKanjiOn);
   document.querySelectorAll('.dispToggle').forEach((btn) => {
     const t = DISPLAY_TOGGLES.find((x) => x.key === btn.dataset.toggle);
-    const on = t.isOn();
+    const on = t.isOn() && !btn.disabled;
     btn.classList.toggle('active', on);
     btn.setAttribute('aria-pressed', on ? 'true' : 'false');
   });
@@ -176,6 +177,7 @@ tabItems.forEach((b) => b.addEventListener('click', () => showTab(b.dataset.tab)
 // ================= Escキー（ダイアログを閉じる・選択モードを抜ける） =================
 document.addEventListener('keydown', (e) => {
   if (e.key !== 'Escape') return;
+  if (!appDialog.hidden) { finishDialog(false); return; }
   if (!nameModal.hidden) { finishName(null); return; }
   if (!folderPicker.hidden) { closeFolderPicker(); return; }
   if (!saveModal.hidden) { closeSaveModal(); return; }
