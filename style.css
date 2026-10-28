@@ -370,6 +370,9 @@ main{
 .kcard{
   position:relative;
   display:flex; align-items:center; justify-content:center;
+  /* 長押し（漢字の削除）で文字の選択やメニューが出ないようにする */
+  -webkit-touch-callout:none;
+  -webkit-user-select:none; user-select:none;
   padding:3px 4px;
   border-radius:8px;
   transition:background-color .15s ease, scale .35s var(--press-spring);
@@ -421,8 +424,8 @@ main{
 #wordSheetList{
   position:relative;
   overflow-y:auto;
-  padding:18px 22px;
-  display:flex; flex-direction:column; gap:12px;
+  padding:14px 22px;
+  display:flex; flex-direction:column; gap:4px;
 }
 /* 続きがある側の端を透けさせて、スクロールできることを示す */
 #wordSheetList.moreBelow{
@@ -448,6 +451,21 @@ main{
 body.wordSheetOpen #allKanjiScreen::after{ opacity:1; }
 .kcard.wordActive{ z-index:11; }
 .wordSheetItem{ display:flex; align-items:baseline; gap:12px; }
+/* 単語を左にスワイプすると削除ボタンが出る（保存一覧の行と同じ動き）。
+   シートは半透明で行を同じ色に塗れないので、行は透明のままにして、ボタンは行がずれている間だけ見せる */
+.wordSheetRowWrap .listRowActions{ opacity:0; transition:opacity .15s ease; }
+.wordSheetRowWrap:has(> .wordSheetItem[style*="translateX(-"]) .listRowActions{ opacity:1; }
+/* 丸いボタンが上下で切れないよう行に少し余白を持たせ、その分 #wordSheetList の行間を詰めている */
+.wordSheetRowWrap .wordSheetItem{
+  position:relative;
+  padding:4px 0;
+  touch-action:pan-y;
+  -webkit-touch-callout:none;
+  -webkit-user-select:none; user-select:none;
+}
+.wordSheetRowWrap .listRowActions{ padding:0 4px 0 8px; }
+.wordSheetRowWrap .rowActionBtn{ width:30px; height:30px; }
+.wordSheetRowWrap .rowActionBtn svg{ width:15px; height:15px; }
 .wordSheetHz{ font-size:22px; font-weight:700; color:var(--paper); letter-spacing:1px; }
 .wordSheetPy{ font-size:19px; font-weight:600; color:var(--seal); letter-spacing:0.2px; }
 /* タップした漢字が、カードの声調とは違う声調で読まれている音節（例：1声の「分」を開いたときの 分外 の fèn） */

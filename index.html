@@ -887,6 +887,43 @@
     else results.scrollTop = results.scrollHeight;
   }
 
+  // ================= 全漢字ページの漢字の削除（長押し） =================
+  // ふだんは漢字を増やすだけなので、削除は目立たない長押しに置く。
+  // その漢字を使った単語が単語帳に1つでもあるときは削除できない（何も起きない）。先に単語を消してから漢字を消す
+  const KANJI_HOLD_MS = 550;
+  function attachKanjiLongPress(card, ch) {
+    let timer = null;
+    let startX = 0, startY = 0;
+    const cancel = () => { clearTimeout(timer); timer = null; };
+    card.addEventListener('pointerdown', (e) => {
+      if (!e.isPrimary) return;
+      delete card.dataset.longPressed;
+      startX = e.clientX; startY = e.clientY;
+      cancel();
+      timer = setTimeout(() => {
+        timer = null;
+        // 指を離したときのclickで単語シートが開かないようにする
+        card.dataset.longPressed = '1';
+        if (wordsContaining(ch).length) return;
+        if (!window.confirm('「' + ch + '」を全漢字から削除しますか？')) return;
+        deleteAllKanji(ch);
+      }, KANJI_HOLD_MS);
+    });
+    card.addEventListener('pointermove', (e) => {
+      if (timer && Math.abs(e.clientX - startX) + Math.abs(e.clientY - startY) > 10) cancel();
+    });
+    card.addEventListener('pointerup', cancel);
+    card.addEventListener('pointercancel', cancel);
+    card.addEventListener('contextmenu', (e) => e.preventDefault());
+  }
+  function deleteAllKanji(ch) {
+    const idx = allKanji.indexOf(ch);
+    if (idx < 0) return;
+    allKanji.splice(idx, 1);
+    persistAllKanji();
+    refreshAllKanjiIfOpen();
+  }
+
   // ================= 全漢字ページの漢字カード =================
   // 漢字だけを大きく表示。声調数字は123トグルON時のみ右肩に小さく（絶対配置なのでレイアウトは動かない）。
   // 単語帳にその漢字を含む単語が1つもないときはタップしても何も起きないので、少し薄い色で示す。
@@ -923,8 +960,9 @@
       card.appendChild(tone);
     }
 
+    attachKanjiLongPress(card, ch);
     card.addEventListener('click', () => {
-      if (!hasWord) return;
+      if (!hasWord || card.dataset.longPressed) return;
       openWordSheetFor(ch, card, base);
     });
 
@@ -996,7 +1034,16 @@
         item.appendChild(hz);
         item.appendChild(py);
       }
-      wordSheetList.appendChild(item);
+      // 左にスワイプすると削除ボタンが出る（保存一覧の行と同じ部品・同じ動き）
+      const wrap = document.createElement('div');
+      wrap.className = 'listRowWrap wordSheetRowWrap';
+      const actions = document.createElement('div');
+      actions.className = 'listRowActions';
+      actions.appendChild(makeRowActionBtn('actDelete', TRASH_SVG, '単語帳から削除', () => deleteWordFromSheet(w)));
+      wrap.appendChild(actions);
+      wrap.appendChild(item);
+      attachRowGestures(wrap, item, () => {}, false);
+      wordSheetList.appendChild(wrap);
     });
     return matches.length;
   }
@@ -1058,6 +1105,23 @@
     setActiveWordCard(null);
     activeWordChar = null;
     activeWordBase = '';
+  }
+  // 単語シートで左スワイプして出した削除ボタンから、その単語を単語帳から削除する。
+  // 全漢字ページの見た目（単語の無い漢字は薄くなる・使われなくなった読みのグループは消える）を描き直し、
+  // まだその漢字の単語が残っていればシートを開いたまま中身を作り直す。最後の1つだったらシートを閉じる
+  function deleteWordFromSheet(word) {
+    const ch = activeWordChar;
+    const base = activeWordBase;
+    const listScroll = wordSheetList.scrollTop;
+    deleteWords([word]);
+    refreshAllKanjiIfOpen();
+    if (wordsForChar(ch, base).length) {
+      reopenWordSheetIfNeeded(ch, base);
+      wordSheetList.scrollTop = listScroll;
+      updateWordSheetFades();
+    } else {
+      closeWordSheet();
+    }
   }
   // 声調123／声調カーブ／日本字体の表示設定が変わったとき用。呼び出し側は
   // renderInputPage(true)でシート自体を閉じずに描画し直しているので、ここでは
@@ -1992,7 +2056,7 @@
 
     wrap.appendChild(actions);
     wrap.appendChild(row);
-    attachFileRowGestures(wrap, row, () => { loadFile(file); showTab('input'); }, true);
+    attachRowGestures(wrap, row, () => { loadFile(file); showTab('input'); }, true);
     return wrap;
   }
 
@@ -2045,7 +2109,7 @@
 
     wrap.appendChild(actions);
     wrap.appendChild(row);
-    attachFileRowGestures(wrap, row, () => {
+    attachRowGestures(wrap, row, () => {
       if (expandedFolders.has(folder.id)) expandedFolders.delete(folder.id);
       else expandedFolders.add(folder.id);
       renderListRows();
@@ -2068,7 +2132,7 @@
   // ファイル行・フォルダ行の両方で使う共通実装。opts.attrで対象行の判別用データ属性
   // （'fileId'→data-file-id、'folderId'→data-folder-id）を切り替え、その種類の行同士でだけ
   // 並び替えが完結するようにする（opts省略時はファイル行向けの既定値で動く）。
-  function attachFileRowGestures(wrap, row, onOpen, enableReorder, opts) {
+  function attachRowGestures(wrap, row, onOpen, enableReorder, opts) {
     // 左スワイプで開く幅＝右に並ぶ丸ボタンの列の幅（ボタンの数で変わるので実寸を使う）
     const actionsEl = wrap.querySelector('.listRowActions');
     let ACTION_W = 0;
