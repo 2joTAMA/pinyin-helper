@@ -290,6 +290,13 @@ body.focusMode #focusToggle{ bottom:-25px; right:10px; }
 #inputWrap:focus-within #clearBtn{ width:40px; margin-left:8px; opacity:1; pointer-events:auto; }
 body.focusMode #inputWrap #clearBtn{ width:0; margin-left:0; opacity:0; pointer-events:none; }
 
+/* 入力ページ全体の入れ物（ほかのページの.pageScreenと同じ作り）。
+   iOS 26のSafariは、画面上端に固定された不透明の要素が無いと上端にぼかしをかけるので、その対策 */
+#inputScreen{
+  position:fixed; inset:0; z-index:0;
+  background:var(--ink);
+  display:flex; flex-direction:column;
+}
 main{
   position:absolute; inset:0;
   display:flex; flex-direction:column;

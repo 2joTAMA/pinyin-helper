@@ -16,6 +16,9 @@
 </head>
 <body>
   <!-- ===== 入力ページ（土台の画面。ほかのページはこの上に全画面で重ねて表示する） ===== -->
+  <!-- ほかのページと同じく、画面全体に固定した不透明の入れ物に入れる。
+       これが無いとiOS 26のSafariが画面上端にぼかしをかけ、ヘッダーの文字やボタンの上半分がぼけてしまう -->
+  <div id="inputScreen">
   <!-- 上部（ヘッダーなど）は内容の上に重ねて表示する。後ろをスクロールする内容がすりガラス越しに透ける -->
   <div class="pageTop">
     <header id="topHeader" class="pageHeader">
@@ -64,6 +67,7 @@
       <div class="emptyState"></div>
     </div>
   </main>
+  </div>
 
   <!-- ===== フッターのタブバー（画面下に浮かぶすりガラスのカプセル） ===== -->
   <nav id="tabBar" aria-label="ページ切り替え">
@@ -231,7 +235,7 @@
   // ---------- element refs ----------
   const input = document.getElementById('zhInput');
   const results = document.getElementById('results');
-  const inputPageTop = document.querySelector('body > .pageTop');
+  const inputPageTop = document.querySelector('#inputScreen > .pageTop');
   const clearBtn = document.getElementById('clearBtn');
   const undoBtn = document.getElementById('undoBtn');
   const surume = document.getElementById('surume');
