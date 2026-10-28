@@ -1,7 +1,6 @@
 /* ===== 拼音帮手のスタイル（index.html から読み込む） ===== */
 :root{
   --ink:#32302b;
-  --ink-soft:#3b3833;
   --paper:#d9d0bd;
   --paper-dim:#93897a;
   /* 入力欄などの塗り（iOSのダークモードの入力欄と同じく、背景より少し明るいグレー） */
@@ -22,7 +21,6 @@
   --seal:#c9704f;
   --seal-soft:#7a4433;
   --seal-dim:#573322;
-  --line:#4a463e;
   --warn:#e2574c;
   --ja-accent:#93d1f2;
   --ja-accent-dim:#7e93a1;

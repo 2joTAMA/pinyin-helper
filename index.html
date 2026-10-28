@@ -1456,17 +1456,6 @@
     if (changed) persistSavedFiles();
   })();
 
-  // 一覧の並び順を「更新日時順」から「手動（配列順）」へ一度だけ移行する。
-  // 既存ユーザーには、今まで見えていた並び（新しい順）をそのまま初期の手動順として渡す。
-  const ORDER_INIT_KEY = 'pinyinHelperOrderInit_v1';
-  try {
-    if (!localStorage.getItem(ORDER_INIT_KEY)) {
-      savedFiles.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
-      persistSavedFiles();
-      localStorage.setItem(ORDER_INIT_KEY, '1');
-    }
-  } catch (e) { /* noop */ }
-
   // ---------- フォルダ（1階層） ----------
   const FOLDER_KEY = 'pinyinHelperFolders_v1';
   function loadFolders() {
@@ -1874,10 +1863,6 @@
   });
 
   // ================= 保存一覧ページ =================
-  // 保存一覧ページを表示する直前に呼ぶ：一覧を今の状態に合わせて作り直す
-  function prepareListScreen() {
-    renderListRows();
-  }
 
   function emptyRow(msg) {
     const empty = document.createElement('div');
@@ -2660,7 +2645,7 @@
     closeWordSheet();
     exitWordSelectMode();
 
-    if (tab === 'list') prepareListScreen();
+    if (tab === 'list') renderListRows();
     if (tab === 'wordbook') { wordAddInput.value = ''; renderWordGrid(); }
     if (tab === 'allKanji') { allKanjiAddInput.value = ''; renderAllKanjiGrid(); }
     // 何も入力されていない状態で入力ページに移ったときは、すぐ書けるよう入力欄を開く
