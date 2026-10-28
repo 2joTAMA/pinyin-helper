@@ -214,8 +214,13 @@
   <div id="nameModal" class="modalOverlay" hidden>
     <div class="modalCard">
       <div class="modalTitle" id="nameModalHeading">フォルダ名</div>
-      <input id="nameModalInput" class="modalInput" type="text" autocomplete="off" maxlength="30" />
-      <div class="modalActions" style="margin-top:12px">
+      <div class="modalInputWrap">
+        <input id="nameModalInput" class="modalInput" type="text" autocomplete="off" maxlength="30" />
+        <button id="nameModalClearBtn" class="modalClearBtn" type="button" title="クリア" aria-label="クリア">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="5" y1="5" x2="19" y2="19"></line><line x1="19" y1="5" x2="5" y2="19"></line></svg>
+        </button>
+      </div>
+      <div class="modalActions">
         <button id="nameModalCancel" class="modalBtnGhost" type="button">キャンセル</button>
         <button id="nameModalOk" class="modalBtnPrimary" type="button">OK</button>
       </div>
@@ -959,6 +964,13 @@
       });
     });
   }
+  // 人名登録した単語の目印（ピンインの末尾、声調カーブ表示では漢字の後ろに添える）
+  function makeWordSheetPersonIcon() {
+    const icon = document.createElement('span');
+    icon.className = 'wordSheetPersonIcon';
+    icon.innerHTML = PERSON_SVG;
+    return icon;
+  }
   // 現在の表示設定（声調123／声調カーブ／日本字体）に合わせて中身だけを作り直す。
   // tone：タップしたカードの声調。これと違う声調で読まれている音節に下線を引く
   function renderWordSheetContent(ch, base, tone) {
@@ -972,6 +984,7 @@
         row.className = 'contourRow';
         appendContourCols(row, w);
         item.appendChild(row);
+        if (personWords.has(w)) item.appendChild(makeWordSheetPersonIcon());
       } else {
         const hz = document.createElement('div');
         hz.className = 'wordSheetHz';
@@ -979,12 +992,7 @@
         const py = document.createElement('div');
         py.className = 'wordSheetPy';
         if (!state.pinyinOff) renderWordPinyin(py, w, { ch, base, tone });
-        if (personWords.has(w)) {
-          const icon = document.createElement('span');
-          icon.className = 'wordSheetPersonIcon';
-          icon.innerHTML = PERSON_SVG;
-          py.appendChild(icon);
-        }
+        if (personWords.has(w)) py.appendChild(makeWordSheetPersonIcon());
         item.appendChild(hz);
         item.appendChild(py);
       }
@@ -1730,9 +1738,20 @@
 
   let modalContext = null; // { mode: 'new' } | { mode: 'rename', fileId }
 
-  function updateModalClearBtn() {
-    modalClearBtn.classList.toggle('show', modalTitleInput.value.length > 0);
+  // ダイアログの入力欄の右端の「クリア」ボタン（文字があるときだけ出す）。保存・フォルダ名のダイアログで共用。
+  // 戻り値は、プログラムから入力欄の値を変えたあとに表示を合わせるための関数
+  function attachModalClearBtn(field, btn) {
+    const update = () => btn.classList.toggle('show', field.value.length > 0);
+    field.addEventListener('input', update);
+    btn.addEventListener('click', () => {
+      field.value = '';
+      update();
+      field.focus();
+    });
+    return update;
   }
+  const updateModalClearBtn = attachModalClearBtn(modalTitleInput, modalClearBtn);
+  const updateNameModalClearBtn = attachModalClearBtn(nameModalInput, document.getElementById('nameModalClearBtn'));
 
   function openSaveModal(ctx) {
     modalContext = ctx;
@@ -1801,12 +1820,6 @@
 
   modalCancelBtn.addEventListener('click', closeSaveModal);
   saveModal.addEventListener('click', (e) => { if (e.target === saveModal) closeSaveModal(); });
-  modalTitleInput.addEventListener('input', updateModalClearBtn);
-  modalClearBtn.addEventListener('click', () => {
-    modalTitleInput.value = '';
-    updateModalClearBtn();
-    modalTitleInput.focus();
-  });
   modalTitleInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') { e.preventDefault(); modalSaveBtn.click(); }
   });
@@ -2303,6 +2316,7 @@
       nameResolve = resolve;
       nameModalHeading.textContent = heading;
       nameModalInput.value = initial || '';
+      updateNameModalClearBtn();
       nameModal.hidden = false;
       setTimeout(() => { nameModalInput.focus(); nameModalInput.select(); }, 0);
     });

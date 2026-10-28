@@ -465,7 +465,7 @@ body.wordSheetOpen #allKanjiScreen::after{ opacity:1; }
 .wordSheetItem .cChar{ font-size:22px; font-weight:700; }
 .wordSheetItem .cTone{ width:19px; height:13px; }
 
-/* ---------- save modal ---------- */
+/* ---------- ダイアログ（保存・フォルダ名・フォルダへ移動） ---------- */
 .modalOverlay{
   position:fixed; inset:0; z-index:100;
   background:rgba(0,0,0,0.4);
@@ -508,6 +508,8 @@ body.wordSheetOpen #allKanjiScreen::after{ opacity:1; }
 .modalHint{ font-size:11px; color:var(--paper-dim); margin-bottom:18px; padding-left:4px; }
 /* ボタンは横に並んだ同じ幅のカプセル（1つだけのときは横幅いっぱい） */
 .modalActions{ display:flex; gap:10px; }
+/* 説明文が無く、入力欄のすぐ下にボタンが来るとき */
+.modalInputWrap + .modalActions{ margin-top:12px; }
 .modalActions > button{ flex:1 1 0; height:46px; border:none; border-radius:999px; font-size:16px; font-weight:600; }
 .modalBtnGhost{ background:rgba(217,208,189,0.14); color:var(--paper); }
 .modalBtnPrimary{ background:var(--seal); color:var(--ink); font-weight:700; }
