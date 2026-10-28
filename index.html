@@ -1791,10 +1791,25 @@
     persistSavedFiles();
   }
 
-  // 一覧や新規作成へ移動する前に呼ぶ：一度でも保存済みのファイルに未保存の変更があれば自動保存する。
-  // まだ一度も保存していない新規ファイルは、確認なしで破棄してよい。
+  // 別のタブへ移る・新規作成する・アプリが裏に回るときに呼ぶ：一度でも保存済みのファイルに未保存の変更があれば上書き保存する。
+  // まだ一度も保存していない文章（ピンインの確認だけに使ったものなど）は保存しない。
   function autoSaveBeforeLeaving() {
-    if (currentFileId && isDirty()) saveExistingFile();
+    if (!currentFileId || !isDirty()) return;
+    saveExistingFile();
+    updateSaveBtnDirtyState();
+  }
+  // iPhoneはアプリが裏に回ったあと、知らないうちに終了させることがあるので、裏に回った時点で保存しておく
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') autoSaveBeforeLeaving();
+  });
+
+  // 開いているファイル（またはそれが入ったフォルダ）を保存一覧で削除したときは、入力欄の文章は残したまま
+  // 「まだ保存していない新しい文章」の扱いに戻す（削除済みのファイルに保存しようとして何も保存されない、を防ぐ）
+  function detachDeletedCurrentFile() {
+    if (!currentFileId || savedFiles.some((f) => f.id === currentFileId)) return;
+    currentFileId = null;
+    setTitleDisplay('');
+    updateSaveBtnDirtyState();
   }
 
   saveBtn.addEventListener('click', () => {
@@ -1913,10 +1928,11 @@
     listRows.appendChild(fileSection);
   }
 
-  // 保存済みファイルを複製する。複製は元ファイルのすぐ後ろに挿入する
+  // 保存済みファイルを複製する。複製は元ファイルのすぐ後ろに挿入し、一覧で区別できるようタイトルに「のコピー」を付ける
   function duplicateFile(file) {
     const copy = Object.assign({}, file, {
       id: 'f' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8),
+      title: (file.title || '無題') + 'のコピー',
       updatedAt: Date.now(),
     });
     const idx = savedFiles.findIndex((f) => f.id === file.id);
@@ -1965,6 +1981,7 @@
       if (!window.confirm('「' + file.title + '」を削除しますか？')) return;
       savedFiles = savedFiles.filter((f) => f.id !== file.id);
       persistSavedFiles();
+      detachDeletedCurrentFile();
       renderListRows();
     });
     actions.appendChild(moveBtn);
@@ -2049,6 +2066,7 @@
       expandedFolders.delete(folder.id);
       persistFolders();
       persistSavedFiles();
+      detachDeletedCurrentFile();
       renderListRows();
     });
     actions.appendChild(renameB);
@@ -2637,8 +2655,8 @@
       if (scroller) scroller.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
-    // 保存一覧へ移るときは、保存済みのファイルに未保存の変更があれば自動保存する
-    if (tab === 'list') autoSaveBeforeLeaving();
+    // ほかのタブへ移るときは、保存済みのファイルに未保存の変更があれば上書き保存する
+    autoSaveBeforeLeaving();
     closeWordSheet();
     exitWordSelectMode();
 
