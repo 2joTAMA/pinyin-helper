@@ -685,6 +685,10 @@
   function setToneContour(el, digit) {
     if (digit) el.dataset.tone = digit;
   }
+  // datasetの名前（groupKey）をHTMLの属性名（data-group-key）にする
+  function dataAttrName(key) {
+    return 'data-' + key.replace(/[A-Z]/g, (m) => '-' + m.toLowerCase());
+  }
   function escapeHtml(s) {
     return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   }
@@ -1199,36 +1203,45 @@
     scroller.scrollTop += el.getBoundingClientRect().top - scroller.getBoundingClientRect().top - topH;
   }
 
-  // 全漢字ページの右端インデックスをタップ／ドラッグして、その子音の先頭グループへジャンプする
-  function jumpAllKanjiToInitial(initial) {
-    const target = allKanjiGrid.querySelector('.kgroup[data-initial="' + CSS.escape(initial) + '"]');
-    if (target) scrollChildToTop(allKanjiGrid, target);
+  // 右端の目次をタップ／なぞって、その項目のグループの先頭へジャンプする（全漢字・単語帳で共用）。
+  // opts: index（目次）, itemSelector（目次の項目）, grid（スクロールする一覧）, groupSelector（グループの要素）,
+  //       key（グループと目次の項目を対応づけるdata属性。dataset上の名前）
+  function attachSideIndexJump(opts) {
+    function jump(item) {
+      const sel = opts.groupSelector + '[' + dataAttrName(opts.key) + '="' + CSS.escape(item.dataset[opts.key]) + '"]';
+      const target = opts.grid.querySelector(sel);
+      if (target) scrollChildToTop(opts.grid, target);
+    }
+    function itemAt(x, y) {
+      const el = document.elementFromPoint(x, y);
+      return el ? el.closest(opts.itemSelector) : null;
+    }
+    // なぞっている間は、指の下の項目を強調する
+    let activeEl = null;
+    function setActive(item) {
+      if (activeEl && activeEl !== item) activeEl.classList.remove('active');
+      activeEl = item || null;
+      if (activeEl) activeEl.classList.add('active');
+    }
+    opts.index.addEventListener('click', (e) => {
+      const item = e.target.closest(opts.itemSelector);
+      if (item) jump(item);
+    });
+    opts.index.addEventListener('touchstart', (e) => {
+      const item = itemAt(e.touches[0].clientX, e.touches[0].clientY);
+      if (item) { jump(item); setActive(item); }
+    }, { passive: true });
+    opts.index.addEventListener('touchmove', (e) => {
+      const item = itemAt(e.touches[0].clientX, e.touches[0].clientY);
+      if (item && item !== activeEl) { jump(item); setActive(item); }
+      e.preventDefault();
+    }, { passive: false });
+    opts.index.addEventListener('touchend', () => setActive(null));
+    opts.index.addEventListener('touchcancel', () => setActive(null));
   }
-  function allKanjiIndexItemAt(x, y) {
-    const el = document.elementFromPoint(x, y);
-    return el ? el.closest('.allKanjiIndexItem') : null;
-  }
-  let allKanjiIndexActiveEl = null;
-  function setAllKanjiIndexActive(item) {
-    if (allKanjiIndexActiveEl && allKanjiIndexActiveEl !== item) allKanjiIndexActiveEl.classList.remove('active');
-    allKanjiIndexActiveEl = item || null;
-    if (allKanjiIndexActiveEl) allKanjiIndexActiveEl.classList.add('active');
-  }
-  allKanjiIndex.addEventListener('click', (e) => {
-    const item = e.target.closest('.allKanjiIndexItem');
-    if (item) jumpAllKanjiToInitial(item.dataset.initial);
+  attachSideIndexJump({
+    index: allKanjiIndex, itemSelector: '.allKanjiIndexItem', grid: allKanjiGrid, groupSelector: '.kgroup', key: 'initial',
   });
-  allKanjiIndex.addEventListener('touchstart', (e) => {
-    const item = allKanjiIndexItemAt(e.touches[0].clientX, e.touches[0].clientY);
-    if (item) { jumpAllKanjiToInitial(item.dataset.initial); setAllKanjiIndexActive(item); }
-  }, { passive: true });
-  allKanjiIndex.addEventListener('touchmove', (e) => {
-    const item = allKanjiIndexItemAt(e.touches[0].clientX, e.touches[0].clientY);
-    if (item && item !== allKanjiIndexActiveEl) { jumpAllKanjiToInitial(item.dataset.initial); setAllKanjiIndexActive(item); }
-    e.preventDefault();
-  }, { passive: false });
-  allKanjiIndex.addEventListener('touchend', () => setAllKanjiIndexActive(null));
-  allKanjiIndex.addEventListener('touchcancel', () => setAllKanjiIndexActive(null));
 
   // ================= 表示切り替え（声調カーブ／ピンインなし／日本字体） =================
   // 単語帳を開いている間に声調表示の設定を切り替えたら、単語帳側も即座に反映する
@@ -1420,17 +1433,20 @@
   });
 
   // ================= 保存（localStorage） =================
-  const STORAGE_KEY = 'pinyinHelperSavedFiles_v1';
-  function loadSavedFiles() {
+  // 保存データはすべて配列のJSONで持つ。読めない・壊れているときは空の配列として扱う
+  function loadArray(key) {
     try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      return raw ? JSON.parse(raw) : [];
+      const arr = JSON.parse(localStorage.getItem(key) || '[]');
+      return Array.isArray(arr) ? arr : [];
     } catch (e) { return []; }
   }
-  function persistSavedFiles() {
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(savedFiles)); } catch (e) { /* noop */ }
+  function saveArray(key, arr) {
+    try { localStorage.setItem(key, JSON.stringify(arr)); } catch (e) { /* noop */ }
   }
-  let savedFiles = loadSavedFiles();
+
+  const STORAGE_KEY = 'pinyinHelperSavedFiles_v1';
+  function persistSavedFiles() { saveArray(STORAGE_KEY, savedFiles); }
+  let savedFiles = loadArray(STORAGE_KEY);
 
   // タイトルは手動入力の1種類だけ（空欄で保存したときだけ冒頭の文字から自動でつける）。
   // 「自動タイトル＋手動サブタイトル」だった時期の保存データは、サブタイトルが入力されていれば
@@ -1458,31 +1474,16 @@
 
   // ---------- フォルダ（1階層） ----------
   const FOLDER_KEY = 'pinyinHelperFolders_v1';
-  function loadFolders() {
-    try {
-      const raw = localStorage.getItem(FOLDER_KEY);
-      return raw ? JSON.parse(raw) : [];
-    } catch (e) { return []; }
-  }
-  function persistFolders() {
-    try { localStorage.setItem(FOLDER_KEY, JSON.stringify(folders)); } catch (e) { /* noop */ }
-  }
-  let folders = loadFolders();
+  function persistFolders() { saveArray(FOLDER_KEY, folders); }
+  let folders = loadArray(FOLDER_KEY);
 
   // ---------- 単語帳（全漢字ページで漢字をタップしたときに関連語を出すための登録単語） ----------
   const WORDS_KEY = 'pinyinHelperWords_v1';
-  function loadWords() {
-    try {
-      const raw = localStorage.getItem(WORDS_KEY);
-      const arr = raw ? JSON.parse(raw) : [];
-      return Array.isArray(arr) ? arr : [];
-    } catch (e) { return []; }
-  }
   function persistWords() {
     wordsByCharIndex = null;
-    try { localStorage.setItem(WORDS_KEY, JSON.stringify(savedWords)); } catch (e) { /* noop */ }
+    saveArray(WORDS_KEY, savedWords);
   }
-  let savedWords = loadWords(); // 新しく登録した単語が先頭
+  let savedWords = loadArray(WORDS_KEY); // 新しく登録した単語が先頭
 
   // 簡体字化して先頭4文字（漢字のみ）に丸め、既に登録済みなら何もしない（重複自動排除）
   // ここに含まれる漢字は、全漢字ページ未登録のものだけ自動で登録する（通知なし）
@@ -1507,17 +1508,8 @@
 
   // ---------- 人名登録（単語帳の単語のうち、人名として登録したものの集合） ----------
   const PERSON_WORDS_KEY = 'pinyinHelperPersonWords_v1';
-  function loadPersonWords() {
-    try {
-      const raw = localStorage.getItem(PERSON_WORDS_KEY);
-      const arr = raw ? JSON.parse(raw) : [];
-      return new Set(Array.isArray(arr) ? arr : []);
-    } catch (e) { return new Set(); }
-  }
-  function persistPersonWords() {
-    try { localStorage.setItem(PERSON_WORDS_KEY, JSON.stringify(Array.from(personWords))); } catch (e) { /* noop */ }
-  }
-  let personWords = loadPersonWords();
+  function persistPersonWords() { saveArray(PERSON_WORDS_KEY, Array.from(personWords)); }
+  let personWords = new Set(loadArray(PERSON_WORDS_KEY));
   // isPerson=trueで人名登録、falseで解除。1件でも変化があればtrueを返す
   function setWordsPersonStatus(words, isPerson) {
     let changed = false;
@@ -1531,17 +1523,8 @@
 
   // ---------- 全漢字（単語帳とは別に、登録した漢字を常にピンインごとにグループ表示するページ） ----------
   const ALL_KANJI_KEY = 'pinyinHelperAllKanji_v1';
-  function loadAllKanji() {
-    try {
-      const raw = localStorage.getItem(ALL_KANJI_KEY);
-      const arr = raw ? JSON.parse(raw) : [];
-      return Array.isArray(arr) ? arr : [];
-    } catch (e) { return []; }
-  }
-  function persistAllKanji() {
-    try { localStorage.setItem(ALL_KANJI_KEY, JSON.stringify(allKanji)); } catch (e) { /* noop */ }
-  }
-  let allKanji = loadAllKanji(); // 登録順（古い順）
+  function persistAllKanji() { saveArray(ALL_KANJI_KEY, allKanji); }
+  let allKanji = loadArray(ALL_KANJI_KEY); // 登録順（古い順）
 
   // 入力された文字列から漢字だけを取り出し、まだ登録していないものだけ末尾に追加する（重複は自動で無視）
   function addAllKanji(raw) {
@@ -1926,6 +1909,21 @@
     renderListRows();
   }
 
+  // 行を左にスワイプしたときに出る丸いボタン（移動・複製・削除など）
+  function makeRowActionBtn(cls, svg, label, onClick) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'rowActionBtn ' + cls;
+    btn.innerHTML = svg;
+    btn.setAttribute('aria-label', label);
+    btn.title = label;
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      onClick();
+    });
+    return btn;
+  }
+
   function makeListRow(file) {
     const wrap = document.createElement('div');
     wrap.className = 'listRowWrap';
@@ -1933,45 +1931,15 @@
     const actions = document.createElement('div');
     actions.className = 'listRowActions';
 
-    const moveBtn = document.createElement('button');
-    moveBtn.type = 'button';
-    moveBtn.className = 'rowActionBtn actMove';
-    moveBtn.innerHTML = MOVE_SVG;
-    moveBtn.setAttribute('aria-label', '移動');
-    moveBtn.title = '移動';
-    moveBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      openFolderPicker(file);
-    });
-
-    const dup = document.createElement('button');
-    dup.type = 'button';
-    dup.className = 'rowActionBtn actDuplicate';
-    dup.innerHTML = COPY_SVG;
-    dup.setAttribute('aria-label', '複製');
-    dup.title = '複製';
-    dup.addEventListener('click', (e) => {
-      e.stopPropagation();
-      duplicateFile(file);
-    });
-
-    const del = document.createElement('button');
-    del.type = 'button';
-    del.className = 'rowActionBtn actDelete';
-    del.innerHTML = TRASH_SVG;
-    del.setAttribute('aria-label', '削除');
-    del.title = '削除';
-    del.addEventListener('click', (e) => {
-      e.stopPropagation();
+    actions.appendChild(makeRowActionBtn('actMove', MOVE_SVG, '移動', () => openFolderPicker(file)));
+    actions.appendChild(makeRowActionBtn('actDuplicate', COPY_SVG, '複製', () => duplicateFile(file)));
+    actions.appendChild(makeRowActionBtn('actDelete', TRASH_SVG, '削除', () => {
       if (!window.confirm('「' + file.title + '」を削除しますか？')) return;
       savedFiles = savedFiles.filter((f) => f.id !== file.id);
       persistSavedFiles();
       detachDeletedCurrentFile();
       renderListRows();
-    });
-    actions.appendChild(moveBtn);
-    actions.appendChild(dup);
-    actions.appendChild(del);
+    }));
 
     const row = document.createElement('div');
     row.className = 'listRow' + (file.id === currentFileId ? ' current' : '');
@@ -2022,25 +1990,8 @@
     const actions = document.createElement('div');
     actions.className = 'listRowActions';
 
-    const renameB = document.createElement('button');
-    renameB.type = 'button';
-    renameB.className = 'rowActionBtn actMove';
-    renameB.innerHTML = PENCIL_SVG;
-    renameB.setAttribute('aria-label', '名前を変更');
-    renameB.title = '名前を変更';
-    renameB.addEventListener('click', (e) => {
-      e.stopPropagation();
-      renameFolderFlow(folder);
-    });
-
-    const delB = document.createElement('button');
-    delB.type = 'button';
-    delB.className = 'rowActionBtn actDelete';
-    delB.innerHTML = TRASH_SVG;
-    delB.setAttribute('aria-label', '削除');
-    delB.title = '削除';
-    delB.addEventListener('click', (e) => {
-      e.stopPropagation();
+    actions.appendChild(makeRowActionBtn('actMove', PENCIL_SVG, '名前を変更', () => renameFolderFlow(folder)));
+    actions.appendChild(makeRowActionBtn('actDelete', TRASH_SVG, '削除', () => {
       const n = fileCountInFolder(folder.id);
       const msg = n
         ? 'フォルダ「' + folder.name + '」を削除します。\n中の' + n + '件も一緒に削除されます。'
@@ -2053,9 +2004,7 @@
       persistSavedFiles();
       detachDeletedCurrentFile();
       renderListRows();
-    });
-    actions.appendChild(renameB);
-    actions.appendChild(delB);
+    }));
 
     if (expandedFolders.has(folder.id)) wrap.classList.add('expanded');
 
@@ -2113,7 +2062,7 @@
     const HOLD_MS = 380;
     const MOVE_CANCEL = 10;
     const itemAttr = (opts && opts.attr) || 'fileId';
-    const itemSelector = '.listRow[data-' + itemAttr.replace(/[A-Z]/g, (m) => '-' + m.toLowerCase()) + ']';
+    const itemSelector = '.listRow[' + dataAttrName(itemAttr) + ']';
     const commitOrder = (opts && opts.commit) || commitOrderFromDom;
 
     let startX = 0, startY = 0, grabX = 0, grabY = 0, lastY = 0;
@@ -2294,35 +2243,22 @@
     }
   }
 
-  // DOM 上のファイル行の並びを savedFiles に反映（表示中の行だけを、その枠内で入れ替える）
-  function commitOrderFromDom(container) {
-    const scope = container || listRows;
-    const shownIds = Array.prototype.map.call(
-      scope.querySelectorAll('.listRow[data-file-id]'),
-      (r) => r.dataset.fileId
-    );
-    if (!shownIds.length) return;
+  // DOM 上の行の並びを配列に反映した新しい配列を返す（表示中の行だけを、その枠内で入れ替える）。
+  // attrは行のdata属性のdataset上の名前（'fileId' | 'folderId'）
+  function reorderByDom(list, scope, attr) {
+    const shownIds = Array.prototype.map.call(scope.querySelectorAll('.listRow[' + dataAttrName(attr) + ']'), (r) => r.dataset[attr]);
     const shown = new Set(shownIds);
-    const byId = new Map(savedFiles.map((f) => [f.id, f]));
+    const byId = new Map(list.map((x) => [x.id, x]));
     const queue = shownIds.map((id) => byId.get(id)).filter(Boolean);
     let qi = 0;
-    savedFiles = savedFiles.map((f) => (shown.has(f.id) ? queue[qi++] : f));
+    return list.map((x) => (shown.has(x.id) ? queue[qi++] : x));
+  }
+  function commitOrderFromDom(scope) {
+    savedFiles = reorderByDom(savedFiles, scope, 'fileId');
     persistSavedFiles();
   }
-
-  // DOM 上のフォルダ行の並びを folders に反映（commitOrderFromDomのフォルダ版）
-  function commitFolderOrderFromDom(container) {
-    const scope = container || listRows;
-    const shownIds = Array.prototype.map.call(
-      scope.querySelectorAll('.listRow[data-folder-id]'),
-      (r) => r.dataset.folderId
-    );
-    if (!shownIds.length) return;
-    const shown = new Set(shownIds);
-    const byId = new Map(folders.map((f) => [f.id, f]));
-    const queue = shownIds.map((id) => byId.get(id)).filter(Boolean);
-    let qi = 0;
-    folders = folders.map((f) => (shown.has(f.id) ? queue[qi++] : f));
+  function commitFolderOrderFromDom(scope) {
+    folders = reorderByDom(folders, scope, 'folderId');
     persistFolders();
   }
 
@@ -2562,38 +2498,10 @@
     screen: wordbookScreen, grid: wordGrid, index: wordbookIndex, groupSelector: '.wordGroup', key: 'groupKey',
   });
 
-  // 単語帳の右端インデックスをタップ／ドラッグして、そのグループの先頭見出しへジャンプする
-  // （全漢字ページの同機能と同じ操作感にしている）
-  function jumpWordbookToGroup(groupKey) {
-    const target = wordGrid.querySelector('.wordGroup[data-group-key="' + CSS.escape(groupKey) + '"]');
-    if (target) scrollChildToTop(wordGrid, target);
-  }
-  function wordbookIndexItemAt(x, y) {
-    const el = document.elementFromPoint(x, y);
-    return el ? el.closest('.wordbookIndexItem') : null;
-  }
-  let wordbookIndexActiveEl = null;
-  function setWordbookIndexActive(item) {
-    if (wordbookIndexActiveEl && wordbookIndexActiveEl !== item) wordbookIndexActiveEl.classList.remove('active');
-    wordbookIndexActiveEl = item || null;
-    if (wordbookIndexActiveEl) wordbookIndexActiveEl.classList.add('active');
-  }
-  wordScrollTopBtn.addEventListener('click', () => wordGrid.scrollTo({ top: 0, behavior: 'smooth' }));
-  wordbookIndex.addEventListener('click', (e) => {
-    const item = e.target.closest('.wordbookIndexItem');
-    if (item) jumpWordbookToGroup(item.dataset.groupKey);
+  attachSideIndexJump({
+    index: wordbookIndex, itemSelector: '.wordbookIndexItem', grid: wordGrid, groupSelector: '.wordGroup', key: 'groupKey',
   });
-  wordbookIndex.addEventListener('touchstart', (e) => {
-    const item = wordbookIndexItemAt(e.touches[0].clientX, e.touches[0].clientY);
-    if (item) { jumpWordbookToGroup(item.dataset.groupKey); setWordbookIndexActive(item); }
-  }, { passive: true });
-  wordbookIndex.addEventListener('touchmove', (e) => {
-    const item = wordbookIndexItemAt(e.touches[0].clientX, e.touches[0].clientY);
-    if (item && item !== wordbookIndexActiveEl) { jumpWordbookToGroup(item.dataset.groupKey); setWordbookIndexActive(item); }
-    e.preventDefault();
-  }, { passive: false });
-  wordbookIndex.addEventListener('touchend', () => setWordbookIndexActive(null));
-  wordbookIndex.addEventListener('touchcancel', () => setWordbookIndexActive(null));
+  wordScrollTopBtn.addEventListener('click', () => wordGrid.scrollTo({ top: 0, behavior: 'smooth' }));
 
   // 声調123／記号表記を切り替えても行の高さが動かないよう、ピンインが1行に収まるまで
   // 文字サイズを少しずつ縮める（最小サイズでも収まらなければCSSの省略記号に任せる）。
@@ -2676,17 +2584,23 @@
   }
   tabItems.forEach((b) => b.addEventListener('click', () => showTab(b.dataset.tab)));
 
-  // Enterを押すたびに1件ずつ、入力に含まれる漢字を全部登録する（重複は自動で無視）
-  let allKanjiAddComposing = false;
-  allKanjiAddInput.addEventListener('compositionstart', () => { allKanjiAddComposing = true; });
-  allKanjiAddInput.addEventListener('compositionend', () => { allKanjiAddComposing = false; });
-  allKanjiAddInput.addEventListener('keydown', (e) => {
-    if (e.key !== 'Enter' || allKanjiAddComposing || e.isComposing) return;
-    e.preventDefault();
-    addAllKanji(allKanjiAddInput.value);
-    allKanjiAddInput.value = '';
-    renderAllKanjiGrid();
-  });
+  // 追加欄でEnterを押したら、入力をonEnter(value)に渡して欄を空にする（IME変換確定のEnterと誤爆しないようcompositionを見る）
+  function onAddFieldEnter(field, onEnter) {
+    let composing = false;
+    field.addEventListener('compositionstart', () => { composing = true; });
+    field.addEventListener('compositionend', () => { composing = false; });
+    field.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter' || composing || e.isComposing) return;
+      e.preventDefault();
+      const value = field.value;
+      field.value = '';
+      onEnter(value);
+    });
+  }
+  // 単語帳：Enterを押すたびに1件ずつ登録する
+  onAddFieldEnter(wordAddInput, (value) => { addWord(value); renderWordGrid(); });
+  // 全漢字：Enterを押すたびに、入力に含まれる漢字を全部登録する（重複は自動で無視）
+  onAddFieldEnter(allKanjiAddInput, (value) => { addAllKanji(value); renderAllKanjiGrid(); });
 
   // 入力バーの右に出る「すべて消す」ボタン。普通にクリックで処理すると、押した瞬間に入力欄から
   // フォーカスが外れてボタン自体が引っ込んでしまうので、押し始め（pointerdown）で処理してフォーカスを保つ
@@ -2732,18 +2646,6 @@
     if (!selectedWords.size) return;
     deleteWords(selectedWords);
     exitWordSelectMode();
-    renderWordGrid();
-  });
-
-  // Enterを押すたびに1件ずつ登録する（IME変換確定のEnterと誤爆しないようcompositionを見る）
-  let wordAddComposing = false;
-  wordAddInput.addEventListener('compositionstart', () => { wordAddComposing = true; });
-  wordAddInput.addEventListener('compositionend', () => { wordAddComposing = false; });
-  wordAddInput.addEventListener('keydown', (e) => {
-    if (e.key !== 'Enter' || wordAddComposing || e.isComposing) return;
-    e.preventDefault();
-    addWord(wordAddInput.value);
-    wordAddInput.value = '';
     renderWordGrid();
   });
 
