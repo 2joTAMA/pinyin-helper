@@ -451,6 +451,9 @@ body.wordSheetOpen #allKanjiScreen::after{ opacity:1; }
 .wordSheetItem{ display:flex; align-items:baseline; gap:12px; }
 /* 単語を左にスワイプすると削除ボタンが出る（保存一覧の行と同じ動き）。
    シートは半透明で行を同じ色に塗れないので、行は透明のままにして、ボタンは行がずれている間だけ見せる */
+/* 行（.listRowWrap）は overflow:hidden なので、縦並びの flex の中では高さが足りないと縮んで重なってしまう。
+   縮ませずに #wordSheetList 側をスクロールさせる */
+.wordSheetRowWrap{ flex-shrink:0; }
 .wordSheetRowWrap .listRowActions{ opacity:0; transition:opacity .15s ease; }
 .wordSheetRowWrap:has(> .wordSheetItem[style*="translateX(-"]) .listRowActions{ opacity:1; }
 /* 丸いボタンが上下で切れないよう行に少し余白を持たせ、その分 #wordSheetList の行間を詰めている */
