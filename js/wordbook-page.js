@@ -35,6 +35,14 @@ function getWordToneDigits(word) {
 // pinyin-proは軽声を末尾「0」（まれに「5」）で表すので、どちらも同じ「0」として扱う。
 const TONE_GROUP_ORDER = ['1', '2', '3', '4', '0'];
 const TONE_GROUP_NAME = { '1': '1声', '2': '2声', '3': '3声', '4': '4声', '0': '軽声' };
+// 2文字の声調の組み合わせを、同じ高低の流れで発音する関西弁の言い回しで覚えるためのメモ。
+// 声調順の見出しの横に小さく添える（軽声を含む組み合わせはまだ用意していない）。
+const TONE_PAIR_KANSAI = {
+  '1_1': '聞いてー', '1_2': '行くの？', '1_3': 'やるでぇ', '1_4': '言うなぁ',
+  '2_1': '(明日)会う子', '2_2': 'あるのん？', '2_3': 'マジでぇ？', '2_4': 'あるかい！',
+  '3_1': '歩こー', '3_2': 'なんで？', '3_3': 'ないでぇ', '3_4': 'あんなぁ！',
+  '4_1': 'パン買う', '4_2': '好きなん？', '4_3': 'おるでぇ', '4_4': 'おるかい！',
+};
 function normalizeToneDigit(d) {
   return d === '5' ? '0' : d;
 }
@@ -116,7 +124,7 @@ function wordGroupInfo(word) {
     const headerText = t2
       ? (TONE_GROUP_NAME[t1] || '?') + '-' + (TONE_GROUP_NAME[t2] || '?')
       : (TONE_GROUP_NAME[t1] || '?');
-    return { key, indexText, headerText };
+    return { key, indexText, headerText, subText: TONE_PAIR_KANSAI[key] || '' };
   }
   return null;
 }
@@ -149,6 +157,12 @@ function buildWordGrid() {
         const label = document.createElement('div');
         label.className = 'wordGroupLabel';
         label.textContent = info.headerText;
+        if (info.subText) {
+          const sub = document.createElement('span');
+          sub.className = 'wordGroupLabelSub';
+          sub.textContent = info.subText;
+          label.appendChild(sub);
+        }
         section.appendChild(label);
         chipParent = document.createElement('div');
         chipParent.className = 'wordGroupGrid';
