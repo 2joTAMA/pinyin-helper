@@ -762,7 +762,9 @@ body.wordSheetOpen #allKanjiScreen::after{ opacity:1; }
   pointer-events:none;
 }
 .wordChipPersonIcon svg{ width:100%; height:100%; display:block; }
-.wordChipHz{ font-size:20px; font-weight:600; color:var(--paper); letter-spacing:1px; }
+/* 行の高さを固定する：line-height:normalのままだと、日本漢字表示で書体（ヒラギノ）に切り替わったとき
+   書体ごとの標準の行の高さの違いでカードが少し高くなってしまう。28pxはPingFang SC 20pxの標準の行の高さ */
+.wordChipHz{ font-size:20px; line-height:28px; font-weight:600; color:var(--paper); letter-spacing:1px; }
 /* 声調123／記号表記を切り替えても縦幅が動かないよう高さを固定し、1行に収まる幅まで
    JS(fitAllWordChipPy)が自動で文字サイズを縮める。それでも収まらなければ省略記号で切る。
    min-width:0とoverflow:hiddenがないと、white-space:nowrapの中身の最小幅がグリッドの
@@ -783,7 +785,7 @@ body.wordSheetOpen #allKanjiScreen::after{ opacity:1; }
    漢字の行の高さ・字間は.wordChipHzと同じにし、カーブ(12px)の上下に余白を足して
    1px+24pxぶんの高さにする（上7px＝1px+(24-12)/2、下6px）。 */
 .wordChipContourRow{ justify-content:center; row-gap:2px; }
-.wordChipContourRow .cChar{ font-size:20px; line-height:normal; letter-spacing:1px; }
+.wordChipContourRow .cChar{ font-size:20px; line-height:28px; letter-spacing:1px; }
 .wordChipContourRow .cTone{ width:17px; height:12px; margin-top:7px; margin-bottom:6px; }
 /* 記号モードは1文字ずつの組み立てで配置計算が重いので、画面外のカードは見えるまで計算を後回しにする
    （高さは実際と同じ68pxで見積もり、一度表示したカードは実際の高さを覚える）。ほかのモードはピンインの文字サイズ調整で
