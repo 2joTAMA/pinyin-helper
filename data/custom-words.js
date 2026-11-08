@@ -167,4 +167,5 @@ const CUSTOM_WORDS = {
   "箱子": "xiāng zi",
   "裤子": "kù zi",
   "汉子": "hàn zi",
+  "啰嗦": "luō suo",
 };
